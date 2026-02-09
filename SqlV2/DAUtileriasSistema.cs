@@ -1,27 +1,24 @@
-﻿using System;
 using System.Collections;
-using System.Collections.Generic;
 using System.Data;
 using System.Diagnostics;
-using System.IO;
-using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Xml;
 using System.Xml.Serialization;
 using System.Xml.Xsl;
 using System.Globalization;
-using System.Runtime.Serialization.Formatters.Binary;
-using System.Configuration;
-using Newtonsoft.Json;
+using System.Text.Json;
+using Microsoft.Extensions.Configuration;
+
+namespace EntityGen;
 
 public static class DAUtileriasSistema
 {
-    public static object GetPropertyValue(object objSource, string propertyName)
+    public static object? GetPropertyValue(object objSource, string propertyName)
     {
         try
         {
-            return objSource.GetType().GetProperty(propertyName).GetValue(objSource, null);
+            return objSource.GetType().GetProperty(propertyName)?.GetValue(objSource, null);
         }
         catch
         {
@@ -139,8 +136,8 @@ public static class DAUtileriasSistema
         Type typeDest = destination.GetType();
         Type typeSrc = source.GetType();
 
-        // Iterate the Properties of the source instance and  
-        // populate them from their desination counterparts  
+        // Iterate the Properties of the source instance and
+        // populate them from their desination counterparts
         PropertyInfo[] srcProps = typeSrc.GetProperties();
         foreach (PropertyInfo srcProp in srcProps)
         {
@@ -149,7 +146,7 @@ public static class DAUtileriasSistema
                 continue;
             }
 
-            PropertyInfo targetProperty = typeDest.GetProperty(srcProp.Name);
+            PropertyInfo? targetProperty = typeDest.GetProperty(srcProp.Name);
             if (targetProperty == null)
             {
                 continue;
@@ -183,15 +180,16 @@ public static class DAUtileriasSistema
         var type = "";
 
         var values = new Dictionary<string, string>();
-        Dictionary<string, string> keyDeleteValues =  new Dictionary<string, string>();
-        Dictionary<string, string> keyUpdateValues  = new Dictionary<string, string>();
+        Dictionary<string, string> keyDeleteValues = new Dictionary<string, string>();
+        Dictionary<string, string> keyUpdateValues = new Dictionary<string, string>();
         Dictionary<string, string> keySelectValues = new Dictionary<string, string>();
 
         var objProperties = objSource.GetType().GetProperties();
 
         try
         {
-            tableName = ((DAClassAttributes)objSource.GetType().GetCustomAttribute(typeof(DAClassAttributes))).SqlTableName;
+            var classAttr = (DAClassAttributes?)objSource.GetType().GetCustomAttribute(typeof(DAClassAttributes));
+            tableName = classAttr?.SqlTableName ?? string.Empty;
 
             if (tableName == null)
             {
@@ -205,7 +203,7 @@ public static class DAUtileriasSistema
 
         foreach (PropertyInfo oP in objProperties)
         {
-            object parameterValue = oP.GetValue(objSource, null);
+            object? parameterValue = oP.GetValue(objSource, null);
 
             var isSqlParameter = GetAttributeValue<DAAttributes, bool>(objSource.GetType(), oP.Name, "IsSqlParameter");
 
@@ -223,18 +221,18 @@ public static class DAUtileriasSistema
 
                 switch (typeOfTransaction)
                 {
-                    case DATransactionType.Borrar:
+                    case DATransactionType.Delete:
                         isKeyUpdate = false;
-                       // keyDeleteValues = new Dictionary<string, string>();
+                        // keyDeleteValues = new Dictionary<string, string>();
                         break;
 
-                    case DATransactionType.Actualizar:
+                    case DATransactionType.Update:
                         isKeyDelete = false;
-                       //keyUpdateValues = new Dictionary<string, string>();
+                        //keyUpdateValues = new Dictionary<string, string>();
                         break;
 
-                    case DATransactionType.Consultar:
-                        
+                    case DATransactionType.Select:
+
                         break;
                 }
 
@@ -248,14 +246,14 @@ public static class DAUtileriasSistema
                     parameterName = columnName;
                 }
 
-                if (typeOfTransaction == DATransactionType.Alta || typeOfTransaction == DATransactionType.Actualizar)
+                if (typeOfTransaction == DATransactionType.Add || typeOfTransaction == DATransactionType.Update)
                 {
                     if ((!isNullable) && (parameterValue == null))
                     {
-                        var mensajesSistema = (DAMensajesSistema)objSource.GetType().GetProperty("MensajesSistema").GetValue(objSource);
+                        var mensajesSistema = (DAMensajesSistema?)objSource.GetType().GetProperty("MensajesSistema")?.GetValue(objSource);
                         var mensaje = "[" + parameterName.ToTitleCase() + "] no fue especificado y es requerido.";
 
-                        mensajesSistema.RegistrarMensaje(DAMensajesSistema.TipoMensaje.Error, mensaje);
+                        mensajesSistema?.RegistrarMensaje(DAMensajesSistema.TipoMensaje.Error, mensaje);
                     }
                 }
 
@@ -315,7 +313,7 @@ public static class DAUtileriasSistema
 
                             //parameterValue = null;
                         }
-                        
+
                         //if (parameterValue == new DateTime(1970, 1, 1))
                         //    continue;
 
@@ -335,36 +333,36 @@ public static class DAUtileriasSistema
                         break;
                 }
 
-                if (typeOfTransaction != DATransactionType.Alta)
+                if (typeOfTransaction != DATransactionType.Add)
                 {
                     bool isKey = false;
                     if (isKeyDelete)
                     {
-                        keyDeleteValues.Add(parameterName, parameterValue.ToString());
+                        keyDeleteValues.Add(parameterName, parameterValue.ToString() ?? string.Empty);
                         isKey = true;
                     }
 
                     if (isKeyUpdate)
                     {
-                        keyUpdateValues.Add(parameterName, parameterValue.ToString());
+                        keyUpdateValues.Add(parameterName, parameterValue.ToString() ?? string.Empty);
                         isKey = true;
                     }
 
                     if (isKeySelect)
                     {
-                        keySelectValues.Add(parameterName, parameterValue.ToString());
+                        keySelectValues.Add(parameterName, parameterValue.ToString() ?? string.Empty);
                     }
-                    
+
                     if (!isKey)
                     {
-                        values.Add(parameterName, parameterValue.ToString());
+                        values.Add(parameterName, parameterValue.ToString() ?? string.Empty);
                     }
                 }
                 else
                 {
                     if (!isIdentity)
                     {
-                        values.Add(parameterName, parameterValue.ToString());
+                        values.Add(parameterName, parameterValue.ToString() ?? string.Empty);
                     }
                 }
 
@@ -379,7 +377,7 @@ public static class DAUtileriasSistema
         var contador = 0;
         switch (typeOfTransaction)
         {
-            case DATransactionType.Alta:
+            case DATransactionType.Add:
                 strDummy = "Insert into " + tableName + "\t";
                 var stColumns = "";
                 var stValues = "";
@@ -398,8 +396,8 @@ public static class DAUtileriasSistema
                 strDummy = strDummy + stColumns + "\nValues \t" + stValues;
                 break;
 
-            case DATransactionType.BorrarColeccion:
-            case DATransactionType.Borrar:
+            case DATransactionType.DeleteColection:
+            case DATransactionType.Delete:
                 strDummy = "Delete From " + tableName + "\n";
                 //int contador = 0;
 
@@ -422,7 +420,7 @@ public static class DAUtileriasSistema
 
                 break;
 
-            case DATransactionType.Actualizar:
+            case DATransactionType.Update:
 
                 if (keyUpdateValues.Count <= 0)
                 {
@@ -458,9 +456,9 @@ public static class DAUtileriasSistema
 
                 break;
 
-            case DATransactionType.ConsultarColeccion:
-            case DATransactionType.Consultar:
-                
+            case DATransactionType.SelectColection:
+            case DATransactionType.Select:
+
                 strDummy = "Select * From " + tableName + "\n\t";
 
                 if (keySelectValues.Count > 0)
@@ -500,7 +498,7 @@ public static class DAUtileriasSistema
 
         foreach (PropertyInfo oP in objProperties)
         {
-            object parameterValue = oP.GetValue(objSource, null);
+            object? parameterValue = oP.GetValue(objSource, null);
 
             var isSqlParameter = GetAttributeValue<DAAttributes, bool>(objSource.GetType(), oP.Name, "IsSqlParameter");
 
@@ -531,7 +529,7 @@ public static class DAUtileriasSistema
                         break;
 
                     case "DateTime":
-                        if ((DateTime)parameterValue == default(DateTime))
+                        if ((DateTime)parameterValue! == default(DateTime))
                         {
                             parameterValue = new DateTime(1970, 1, 1);
                         }
@@ -580,7 +578,7 @@ public static class DAUtileriasSistema
         {
             if (Attribute.IsDefined(propertyInfo, typeof(classType)))
             {
-                var attributeInstance = Attribute.GetCustomAttribute(propertyInfo, typeof(classType));
+                Attribute? attributeInstance = Attribute.GetCustomAttribute(propertyInfo, typeof(classType));
 
                 if (attributeInstance != null)
                 {
@@ -588,7 +586,7 @@ public static class DAUtileriasSistema
                     {
                         if (info.CanRead && String.Compare(info.Name, attributePropertyName, StringComparison.InvariantCultureIgnoreCase) == 0)
                         {
-                            return (attributeType)info.GetValue(attributeInstance, null);
+                            return (attributeType)info.GetValue(attributeInstance, null)!;
                         }
                     }
                 }
@@ -631,7 +629,7 @@ public static class DAUtileriasSistema
 
             foreach (DataColumn oC in dtResultado.Columns)
             {
-                PropertyInfo oP = null;
+                PropertyInfo? oP = null;
                 var columnMap = "";
 
                 foreach (PropertyInfo oPInfo in xDestino.GetType().GetProperties())
@@ -663,11 +661,11 @@ public static class DAUtileriasSistema
                         columnMap = oC.ColumnName;
                     }
 
-                    object obj = new object();
+                    object? obj = new object();
                     switch (oP.PropertyType.Name)
                     {
                         case "String":
-                            obj = Convert.ToString(dtResultado.Rows[dtResultado.Rows.IndexOf(oR)][columnMap]).TrimEnd();
+                            obj = Convert.ToString(dtResultado.Rows[dtResultado.Rows.IndexOf(oR)][columnMap])?.TrimEnd();
                             break;
 
                         case "Int16":
@@ -683,7 +681,7 @@ public static class DAUtileriasSistema
                         case "DateTime":
                             if (dtResultado.Rows[dtResultado.Rows.IndexOf(oR)][columnMap] != DBNull.Value)
                             {
-                                obj = DateTime.Parse(dtResultado.Rows[dtResultado.Rows.IndexOf(oR)][columnMap].ToString());
+                                obj = DateTime.Parse(dtResultado.Rows[dtResultado.Rows.IndexOf(oR)][columnMap].ToString()!);
                             }
                             else
                             {
@@ -703,11 +701,11 @@ public static class DAUtileriasSistema
 
             if (isList)
             {
-                objDestino.GetType().GetMethod("Add").Invoke(objDestino, new[] { xDestino });
+                objDestino.GetType().GetMethod("Add")?.Invoke(objDestino, new[] { xDestino });
             }
             else
             {
-                objDestino = (T)xDestino;
+                objDestino = (T)xDestino!;
             }
 
         }
@@ -852,7 +850,7 @@ public static class DAUtileriasSistema
 
         return (fields.Where(fieldInfo => fieldInfo.IsLiteral
                 && !fieldInfo.IsInitOnly
-                && fieldInfo.FieldType == typeof(T)).Select(fi => (T)fi.GetRawConstantValue())).ToList();
+                && fieldInfo.FieldType == typeof(T)).Select(fi => (T)fi.GetRawConstantValue()!)).ToList();
     }
 
     public static List<Type> GetClassInAssembly(Assembly oAssembly)
@@ -868,7 +866,7 @@ public static class DAUtileriasSistema
 
     public static T NextValue<T>(IEnumerable collection, T startValue)
     {
-        object returnValue;
+        object? returnValue;
 
         try
         {
@@ -881,7 +879,7 @@ public static class DAUtileriasSistema
             returnValue = collection.OfType<T>().ToList().LastOrDefault();
         }
 
-        return (T)returnValue;
+        return (T)returnValue!;
     }
 
     public static void PrintProperties(object obj)
@@ -899,7 +897,7 @@ public static class DAUtileriasSistema
 
         foreach (PropertyInfo property in properties)
         {
-            object propValue = property.GetValue(obj, null);
+            object? propValue = property.GetValue(obj, null);
 
             if (property.PropertyType.Assembly == objType.Assembly)
             {
@@ -919,10 +917,10 @@ public static class DAUtileriasSistema
         var oTrace = NextValue<StackFrame>(oSt.GetFrames().ToList(), oSt.GetFrames().FirstOrDefault());
         var sttParams = string.Empty;
 
-        oTrace.GetMethod().GetParameters().ToList().ForEach(oX => sttParams += oX.ParameterType + " " + oX.Name + ", ");
+        oTrace?.GetMethod().GetParameters().ToList().ForEach(oX => sttParams += oX.ParameterType + " " + oX.Name + ", ");
         sttParams = sttParams.Substring(0, sttParams.Length - 2);
 
-        return oTrace.GetMethod().Name + "(" + sttParams + ")";
+        return oTrace?.GetMethod().Name + "(" + sttParams + ")" ?? string.Empty;
     }
 
     public static string IndentXMLString(string xml)
@@ -978,14 +976,14 @@ public static class DAUtileriasSistema
         //Assuming oXml is an XML document containing a serialized object and oType is a System.Type set to the type of the object.
         Type oType = typeof(T);
         var ser = new XmlSerializer(oType);
-        object obj = null;
+        object? obj = null;
 
         using (var reader = new XmlNodeReader(oXml.DocumentElement))
         {
             obj = ser.Deserialize(reader);
         }
 
-        return (T)obj;
+        return (T)obj!;
     }
 
     public static T XmlToObject<T>(string xmlString)
@@ -997,22 +995,22 @@ public static class DAUtileriasSistema
 
         Type oType = typeof(T);
         var ser = new XmlSerializer(oType);
-        object obj = null;
+        object? obj = null;
 
         using (var reader = new XmlNodeReader(oXml.DocumentElement))
         {
             obj = ser.Deserialize(reader);
         }
 
-        return (T)obj;
+        return (T)obj!;
     }
 
-    public static XmlDocument ObjectToXml(object oObjeto, XmlSerializerNamespaces oNamespaces)
+    public static XmlDocument ObjectToXml(object oObjeto, XmlSerializerNamespaces? oNamespaces)
     {
         return ObjectToXml(oObjeto, oNamespaces, true);
     }
 
-    public static XmlDocument ObjectToXml(object oObjeto, XmlSerializerNamespaces oNamespaces, bool omitXmlDeclaration)
+    public static XmlDocument ObjectToXml(object oObjeto, XmlSerializerNamespaces? oNamespaces, bool omitXmlDeclaration)
     {
         XmlSerializer oSerializer = new XmlSerializer(oObjeto.GetType());
         XmlDocument oXdoc = new XmlDocument();
@@ -1050,9 +1048,14 @@ public static class DAUtileriasSistema
         return oXdoc;
     }
 
-    public static string GetAppSettingValue(string keyValue)
+    public static string? GetAppSettingValue(string keyValue)
     {
-        return ConfigurationManager.AppSettings[keyValue];
+        var configuration = new ConfigurationBuilder()
+            .SetBasePath(Directory.GetCurrentDirectory())
+            .AddJsonFile("appsettings.json", optional: false)
+            .Build();
+
+        return configuration[keyValue];
     }
 
     public static string DataTableToHTML(DataTable dt)
@@ -1113,15 +1116,13 @@ public static class DAUtileriasSistema
 
     public static string ObjectToBinary(object oBj)
     {
-        MemoryStream memoStream = new MemoryStream();
-        BinaryFormatter bf = new BinaryFormatter();
-
-        bf.Serialize(memoStream, oBj);
-
-        memoStream.Flush();
-        memoStream.Position = 0;
-
-        return Convert.ToBase64String(memoStream.ToArray());
+        // Replaced BinaryFormatter with System.Text.Json
+        var options = new JsonSerializerOptions
+        {
+            WriteIndented = false
+        };
+        byte[] jsonBytes = JsonSerializer.SerializeToUtf8Bytes(oBj, options);
+        return Convert.ToBase64String(jsonBytes);
     }
 
     //public static T JsonToObject<T>(T Object, string jsonString)

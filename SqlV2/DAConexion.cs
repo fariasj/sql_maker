@@ -1,42 +1,38 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Web;
-using System.Data.Common;
-using System.Data;
-using System.Data.SqlClient;
-//using System.Web.Configuration;
 using System.Diagnostics;
-using System.Configuration;
+using System.Data;
+using System.Data.Common;
+using Microsoft.Extensions.Configuration;
+
+namespace EntityGen;
 
 public delegate void DAConexionEventHandler(object sender, DAConexionEventArgs e);
+
 public class DAConexionEventArgs : EventArgs
 {
-    //public string _msg;
-    public string Cmd;
-    public SqlConnection ConnectionString;
-    //public string CurrentMethod;
+    public string Cmd { get; set; } = string.Empty;
+    public IDbConnection? ConnectionString { get; set; }
 
-    public DAConexionEventArgs(string sqlcmd, SqlConnection sqlConnection)
+    public DAConexionEventArgs(string sqlcmd, IDbConnection? dbConnection)
     {
         StackTrace trace = new StackTrace();
         StackFrame frame = new StackFrame(2);
         var method = frame.GetMethod();
 
-        //_msg = msg;
-
         Cmd = "";
 
-        if (method.DeclaringType.Name != "DAConexion")
+        if (method?.DeclaringType?.Name != "DAConexion")
         {
-            Cmd += DateTime.Now.ToString("dd/MM/yyyy hh:mm:ss") + "|" + DAConstantes.CurrentUser + "|" + method.DeclaringType + " - " + method.Name + "\t| " + sqlcmd;
+            Cmd += DateTime.Now.ToString("dd/MM/yyyy hh:mm:ss") + "|" + DAConstantes.CurrentUser + "|" + method?.DeclaringType + " - " + method?.Name + "\t| " + sqlcmd;
         }
 
-        //var s = 
-        ConnectionString = sqlConnection;
+        ConnectionString = dbConnection;
     }
 }
 
+/// <summary>
+/// Database connection wrapper using Factory Pattern
+/// Supports both SQL Server and PostgreSQL through IDatabase interface
+/// </summary>
 public class DAConexion : IDisposable
 {
     private void Cnx_OnExecuteQuery(object sender, DAConexionEventArgs e)
@@ -44,226 +40,237 @@ public class DAConexion : IDisposable
         Debug.WriteLineIf(Debugger.IsAttached && !e.Cmd.IsNullOrEmpty(), e.Cmd);
     }
 
-    private string cadconexion;
-    SqlConnection sqlConexion;
-
-    public string InfoMessage { get; set; }
-
-    public event DAConexionEventHandler OnExecuteQuery;
-
-    public SqlConnection Connection
-    {
-        get { return sqlConexion; }
-    }
-
-    SqlTransaction sqlTransaction;
-    SqlCommand sqlCommand;
+    private readonly IDatabase _database;
     private bool disposed = false;
 
+    public string InfoMessage
+    {
+        get => _database.InfoMessage;
+        set
+        {
+            _database.InfoMessage = value;
+        }
+    }
+
+    public event DAConexionEventHandler? OnExecuteQuery;
+
+    /// <summary>
+    /// Gets the underlying database connection (for backward compatibility)
+    /// </summary>
+    public IDbConnection? Connection => _database.Connection;
+
+    /// <summary>
+    /// Default constructor - reads database type and connection string from appsettings.json
+    /// </summary>
     public DAConexion()
     {
-        cadconexion = ConfigurationManager.ConnectionStrings["cnxDefault"].ToString();
-        OnExecuteQuery += Cnx_OnExecuteQuery;
+        var configuration = new ConfigurationBuilder()
+            .SetBasePath(Directory.GetCurrentDirectory())
+            .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+            .Build();
 
-        CrearDbConnection();
+        var dbSettings = configuration.GetSection("DatabaseSettings")
+            .Get<DatabaseSettings>();
+
+        if (dbSettings == null)
+        {
+            throw new Exception("DatabaseSettings section not found in appsettings.json");
+        }
+
+        var connectionString = dbSettings.GetConnectionString();
+
+        _database = DatabaseFactoryManager.CreateDatabase(dbSettings.DatabaseType, connectionString);
+        _database.Open();
+
+        OnExecuteQuery += Cnx_OnExecuteQuery;
     }
 
+    /// <summary>
+    /// Constructor with explicit connection string (defaults to SQL Server for backward compatibility)
+    /// </summary>
+    /// <param name="connectionString">The connection string</param>
     public DAConexion(string connectionString)
     {
-        cadconexion = connectionString;
-        OnExecuteQuery += Cnx_OnExecuteQuery;
+        // Default to SQL Server for backward compatibility
+        _database = DatabaseFactoryManager.CreateDatabase(DatabaseType.SqlServer, connectionString);
+        _database.Open();
 
-        CrearDbConnection();
+        OnExecuteQuery += Cnx_OnExecuteQuery;
     }
 
+    /// <summary>
+    /// Constructor with explicit database type and connection string
+    /// </summary>
+    /// <param name="databaseType">The type of database (SqlServer or PostgreSQL)</param>
+    /// <param name="connectionString">The connection string</param>
+    public DAConexion(DatabaseType databaseType, string connectionString)
+    {
+        _database = DatabaseFactoryManager.CreateDatabase(databaseType, connectionString);
+        _database.Open();
+
+        OnExecuteQuery += Cnx_OnExecuteQuery;
+    }
+
+    /// <summary>
+    /// Begins a database transaction
+    /// </summary>
     public bool BeginTransaction()
     {
-        if (sqlTransaction == null)
+        if (_database is SqlServerDatabase sqlServerDb)
         {
-            sqlTransaction = sqlConexion.BeginTransaction();
-            sqlCommand.Transaction = sqlTransaction;
-
+            sqlServerDb.BeginTransaction();
             return true;
         }
-        else
+        else if (_database is PostgreSqlDatabase postgreSqlDb)
         {
-            return false;
+            postgreSqlDb.BeginTransaction();
+            return true;
         }
+
+        return false;
     }
 
+    /// <summary>
+    /// Commits the current transaction
+    /// </summary>
     public void CommitTransaction()
     {
-        // No se pregunta si es null porque la idea es que ocurra un error si se utiliza mal
-        sqlTransaction.Commit();
-        sqlTransaction.Dispose();
-        sqlTransaction = null;
-
-        sqlCommand.Transaction = null;
-    }
-
-    public void RollbackTransaction()
-    {
-        // No se pregnta si es null porque la idea es que ocurra un error si se utiliza mal
-        if (sqlTransaction != null)
+        if (_database is SqlServerDatabase sqlServerDb)
         {
-            sqlTransaction.Rollback();
-
-            sqlTransaction.Dispose();
-            sqlTransaction = null;
-
-            sqlCommand.Transaction = null;
+            sqlServerDb.CommitTransaction();
+        }
+        else if (_database is PostgreSqlDatabase postgreSqlDb)
+        {
+            postgreSqlDb.CommitTransaction();
         }
     }
 
-    public string ExecuteScalar(string cmdSql)
+    /// <summary>
+    /// Rolls back the current transaction
+    /// </summary>
+    public void RollbackTransaction()
     {
-        OnExecuteQuery?.Invoke(this, new DAConexionEventArgs(cmdSql, this.Connection));
-
-        return ExecuteQuery(cmdSql).Rows[0][0].ToString();
+        if (_database is SqlServerDatabase sqlServerDb)
+        {
+            sqlServerDb.RollbackTransaction();
+        }
+        else if (_database is PostgreSqlDatabase postgreSqlDb)
+        {
+            postgreSqlDb.RollbackTransaction();
+        }
     }
 
+    /// <summary>
+    /// Executes a query and returns the first column of the first row
+    /// </summary>
+    public string ExecuteScalar(string cmdSql)
+    {
+        OnExecuteQuery?.Invoke(this, new DAConexionEventArgs(cmdSql, _database.Connection));
+
+        return _database.ExecuteScalar(cmdSql)?.ToString() ?? string.Empty;
+    }
+
+    /// <summary>
+    /// Executes a query and returns the first row
+    /// </summary>
     public DataRow ExecuteAndGetFirstRow(string cmdSql)
     {
-        OnExecuteQuery?.Invoke(this, new DAConexionEventArgs(cmdSql, this.Connection));
+        OnExecuteQuery?.Invoke(this, new DAConexionEventArgs(cmdSql, _database.Connection));
 
         return ExecuteQuery(cmdSql).Rows[0];
     }
 
+    /// <summary>
+    /// Executes a query and returns a DataSet
+    /// </summary>
     public DataSet ExecuteQueryDataSet(string cmdSql)
     {
-        OnExecuteQuery?.Invoke(this, new DAConexionEventArgs(cmdSql, this.Connection));
+        OnExecuteQuery?.Invoke(this, new DAConexionEventArgs(cmdSql, _database.Connection));
 
-        DbDataAdapter dbDataAdapter;
         DataSet dtTable = new DataSet();
-
         dtTable.Clear();
-
-        sqlCommand.CommandText = cmdSql;
-        dbDataAdapter = new SqlDataAdapter();
-        dbDataAdapter.SelectCommand = sqlCommand;
 
         try
         {
-            dbDataAdapter.Fill(dtTable);
+            var resultTable = _database.ExecuteQuery(cmdSql);
+            dtTable.Tables.Add(resultTable);
         }
         catch (Exception ex)
         {
-            //throw new Exception(ex.Message + Environment.NewLine + cmdSql);
             throw new Exception(ex.Message + Environment.NewLine);
         }
 
         return dtTable;
     }
 
+    /// <summary>
+    /// Executes a query and returns a DataTable
+    /// </summary>
     public DataTable ExecuteQuery(string cmdSql)
     {
-        OnExecuteQuery?.Invoke(this, new DAConexionEventArgs(cmdSql, this.Connection));
+        OnExecuteQuery?.Invoke(this, new DAConexionEventArgs(cmdSql, _database.Connection));
 
         return ExecuteQuery(cmdSql, false);
     }
 
+    /// <summary>
+    /// Executes a query and returns a DataTable with optional empty data check
+    /// </summary>
     public DataTable ExecuteQuery(string cmdSql, bool throwEmptyData)
     {
-        OnExecuteQuery?.Invoke(this, new DAConexionEventArgs(cmdSql, this.Connection));
+        OnExecuteQuery?.Invoke(this, new DAConexionEventArgs(cmdSql, _database.Connection));
 
-        DbDataAdapter dbDataAdapter;
         DataTable dtTable = new DataTable();
-
-        dtTable.Clear();
-
-        sqlCommand.CommandText = cmdSql;
-        dbDataAdapter = new SqlDataAdapter();
-        dbDataAdapter.SelectCommand = sqlCommand;
 
         try
         {
-            dbDataAdapter.Fill(dtTable);
+            dtTable = _database.ExecuteQuery(cmdSql);
+
+            if (throwEmptyData)
+            {
+                if (dtTable.Rows.Count <= 0)
+                {
+                    throw new Exception("No data found");
+                }
+            }
         }
         catch (Exception ex)
         {
-            //throw new Exception(ex.Message + Environment.NewLine + cmdSql);
             throw new Exception(ex.Message + Environment.NewLine);
-        }
-
-        if (throwEmptyData)
-        {
-            if (dtTable.Rows.Count <= 0)
-            {
-                throw new Exception("No se encontró información");
-            }
         }
 
         return dtTable;
     }
 
-    private void CrearDbConnection()
-    {
-        sqlConexion = new SqlConnection();
-        sqlConexion.ConnectionString = cadconexion;
-
-        sqlConexion.InfoMessage += SqlConexion_InfoMessage;
-
-        try
-        {
-            sqlConexion.Open();
-            sqlCommand = (SqlCommand)CrearDbCommand(0);
-        }
-        catch (Exception ex)
-        {
-            if (sqlCommand != null)
-            {
-                sqlCommand.Dispose();
-            }
-
-            if (sqlConexion != null)
-            {
-                sqlConexion.Dispose();
-            }
-
-            throw new Exception(ex.Message);
-        }
-    }
-
-    private void SqlConexion_InfoMessage(object sender, SqlInfoMessageEventArgs e)
-    {
-        InfoMessage = e.Message + "\n" + e.Source + "\n" + e.Errors;
-        //throw new NotImplementedException();
-    }
-
-    private DbCommand CrearDbCommand(int timeOut)
-    {
-        DbCommand dbCommand;
-        string commandTimeout = timeOut.ToString();
-
-        if ((timeOut <= 0))
-        {
-            commandTimeout = "50";
-        }
-
-        dbCommand = sqlConexion.CreateCommand();
-        dbCommand.CommandTimeout = int.Parse(commandTimeout);
-        dbCommand.Transaction = sqlTransaction;
-
-        return dbCommand;
-    }
-
+    /// <summary>
+    /// Executes a non-query SQL command (INSERT, UPDATE, DELETE)
+    /// </summary>
     public int ExecuteNonQuery(string cmdSql)
     {
-        OnExecuteQuery?.Invoke(this, new DAConexionEventArgs(cmdSql, this.Connection));
-
-        sqlCommand.CommandText = cmdSql;
+        OnExecuteQuery?.Invoke(this, new DAConexionEventArgs(cmdSql, _database.Connection));
 
         try
         {
-            return sqlCommand.ExecuteNonQuery();
+            return _database.ExecuteNonQuery(cmdSql);
         }
         catch (Exception ex)
         {
-            //throw new Exception(ex.Message + Environment.NewLine + cmdSql);
             throw new Exception(ex.Message + Environment.NewLine);
         }
     }
 
+    /// <summary>
+    /// Gets schema information from the database
+    /// </summary>
+    public DataTable GetSchema(string collectionName)
+    {
+        return _database.GetSchema(collectionName);
+    }
+
+    /// <summary>
+    /// Exposes the underlying IDatabase for advanced scenarios
+    /// </summary>
+    public IDatabase Database => _database;
 
     #region IDisposable Members
 
@@ -280,31 +287,16 @@ public class DAConexion : IDisposable
 
     private void Dispose(bool disposing)
     {
-        if (!this.disposed)
+        if (!disposed)
         {
             if (disposing)
             {
-                if (sqlTransaction != null)
-                {
-                    sqlTransaction.Dispose();
-                }
-
-                if (sqlCommand != null)
-                {
-                    sqlCommand.Dispose();
-                }
-
-                if (sqlConexion != null)
-                {
-                    sqlConexion.Dispose();
-                }
+                _database?.Dispose();
             }
-        }
 
-        disposed = true;
+            disposed = true;
+        }
     }
 
     #endregion
 }
-
-

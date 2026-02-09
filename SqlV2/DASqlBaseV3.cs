@@ -1,15 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Data;
-using System.Linq;
-using System.Reflection;
+using System.Text.Json.Serialization;
+
+namespace EntityGen;
 
 public delegate void DASqlErrorEventHandler(object sender, DASqlErrorEventArgs e);
+
 public class DASqlErrorEventArgs : EventArgs
 {
-    public string MsgError { get; private set; }
-    public string SqlCmd { get; private set; }
-    public string SqlConexion { get; private set; }
+    public string MsgError { get; private set; } = string.Empty;
+    public string SqlCmd { get; private set; } = string.Empty;
+    public string SqlConexion { get; private set; } = string.Empty;
     public DATransactionType TipoOperacion { get; private set; }
 
     public DASqlErrorEventArgs(string msgError, string cmdSql, string cnxSql, DATransactionType tipoOperacion)
@@ -22,11 +21,12 @@ public class DASqlErrorEventArgs : EventArgs
 }
 
 public delegate void DASqlOkEventHandler(object sender, DASqlOkEventArgs e);
+
 public class DASqlOkEventArgs : EventArgs
 {
     public int Id { get; set; }
     public double TimeOfExecute { get; set; }
-    public string SqlInfoMessage { get; set; }
+    public string SqlInfoMessage { get; set; } = string.Empty;
     public DATransactionType TipoOperacion { get; private set; }
 
     public DASqlOkEventArgs(int id, double timeOfExecute, string sqlMessage, DATransactionType tipoOperacion)
@@ -40,16 +40,16 @@ public class DASqlOkEventArgs : EventArgs
 
 public abstract class DASqlBaseV3<T> where T : DASqlBaseV3<T>
 {
-    [Newtonsoft.Json.JsonIgnore]
+    [JsonIgnore]
     public DAMensajesSistema MensajesSistema { get; }
 
-    public event DASqlErrorEventHandler OnSqlError;
-    public event DASqlOkEventHandler OnSqlOk;
+    public event DASqlErrorEventHandler? OnSqlError;
+    public event DASqlOkEventHandler? OnSqlOk;
 
-    protected string SP_NAME;
+    protected string SP_NAME = string.Empty;
     protected int Id;
 
-    private string infoSqlMessage;
+    private string infoSqlMessage = string.Empty;
 
     public DASqlBaseV3()
     {
@@ -109,14 +109,14 @@ public abstract class DASqlBaseV3<T> where T : DASqlBaseV3<T>
 
             switch (tipoAfectacion)
             {
-                case DATransactionType.Alta:
+                case DATransactionType.Add:
                     var id = cnx.ExecuteScalar(cmdSql);
                     Id = id.Parse<int>();
                     break;
 
-                case DATransactionType.Borrar:
-                case DATransactionType.BorrarColeccion:
-                case DATransactionType.Actualizar:
+                case DATransactionType.Delete:
+                case DATransactionType.DeleteColection:
+                case DATransactionType.Update:
                     cnx.ExecuteNonQuery(cmdSql);
                     break;
             }
@@ -146,7 +146,7 @@ public abstract class DASqlBaseV3<T> where T : DASqlBaseV3<T>
 
             MensajesSistema.RegistrarMensaje("No se pudo ejecutar la accion [" + tipoAfectacion.ToString().ToUpper() + "].");
 
-            OnSqlError?.Invoke(this, new DASqlErrorEventArgs(ex.Message.Replace("'", "~"), cmdSql, cnx.Connection.ConnectionString, tipoAfectacion));
+            OnSqlError?.Invoke(this, new DASqlErrorEventArgs(ex.Message.Replace("'", "~"), cmdSql, cnx.Connection?.ConnectionString ?? string.Empty, tipoAfectacion));
         }
 
         return !huboErrores;
@@ -154,30 +154,30 @@ public abstract class DASqlBaseV3<T> where T : DASqlBaseV3<T>
 
     public virtual bool Guardar(DAConexion cnx)
     {
-        return Afectar(DATransactionType.Alta, cnx);
+        return Afectar(DATransactionType.Add, cnx);
     }
 
     public virtual bool Modificar(DAConexion cnx)
     {
-        return Afectar(DATransactionType.Actualizar, cnx);
+        return Afectar(DATransactionType.Update, cnx);
     }
 
     public virtual bool Borrar(DAConexion cnx)
     {
-        return Afectar(DATransactionType.Borrar, cnx);
+        return Afectar(DATransactionType.Delete, cnx);
     }
 
     public virtual bool BorrarColeccion(DAConexion cnx)
     {
-        return Afectar(DATransactionType.BorrarColeccion, cnx);
+        return Afectar(DATransactionType.DeleteColection, cnx);
     }
 
     public virtual bool Consultar(DAConexion cnx)
     {
-        T _obj;
+        T? _obj;
         var startDate = DateTime.Now;
 
-        int _accion = (int)DATransactionType.Consultar;
+        int _accion = (int)DATransactionType.Select;
         string cmdSql = "";
 
         try
@@ -200,18 +200,21 @@ public abstract class DASqlBaseV3<T> where T : DASqlBaseV3<T>
                     break;
 
                 case DASqlType.Table:
-                    cmdSql = DAUtileriasSistema.ObjectToSqlString(DATransactionType.Consultar, this);
+                    cmdSql = DAUtileriasSistema.ObjectToSqlString(DATransactionType.Select, this);
                     break;
             }
 
             var dt = cnx.ExecuteQuery(cmdSql);
 
             DAUtileriasSistema.TableToObject(out _obj, dt);
-            DAUtileriasSistema.CopyProperties<T>(_obj, this);
+            if (_obj != null)
+            {
+                DAUtileriasSistema.CopyProperties<T>(_obj, this);
+            }
 
             var timeOfExecute = DateTime.Now.Subtract(startDate).TotalMilliseconds;
 
-            OnSqlOk?.Invoke(this, new DASqlOkEventArgs(Id, timeOfExecute, cnx.InfoMessage, DATransactionType.Consultar));
+            OnSqlOk?.Invoke(this, new DASqlOkEventArgs(Id, timeOfExecute, cnx.InfoMessage, DATransactionType.Select));
 
             return true;
         }
@@ -222,56 +225,24 @@ public abstract class DASqlBaseV3<T> where T : DASqlBaseV3<T>
                 MensajesSistema.RegistrarMensaje(ex.Message.Replace("'", "~"));
             }
 
-            MensajesSistema.RegistrarMensaje("No se pudo ejecutar la accion [" + DATransactionType.Consultar.ToString().ToUpper() + "].");
+            MensajesSistema.RegistrarMensaje("No se pudo ejecutar la accion [" + DATransactionType.Select.ToString().ToUpper() + "].");
 
             //MensajesSistema.RegistrarMensaje("No se pudo ejecutar la accion '" + DATransactionType.Consultar.ToString().ToUpper() + "'\n" +
             //                    "Error: " + ex.Message);
 
-            OnSqlError?.Invoke(this, new DASqlErrorEventArgs(ex.Message, cmdSql, cnx.Connection.ConnectionString, DATransactionType.Consultar));
+            OnSqlError?.Invoke(this, new DASqlErrorEventArgs(ex.Message, cmdSql, cnx.Connection?.ConnectionString ?? string.Empty, DATransactionType.Select));
 
             //_obj = default(T);
             return false;
         }
     }
 
-    //[Obsolete]
-    //public virtual DataTable ConsultarColeccion(DAConexion cnx)
-    //{
-    //    T _obj;
-    //    var startDate = DateTime.Now;
-
-    //    int _accion = (int)DATransactionType.ConsultarColeccion;
-
-    //    string cmdSql = SP_NAME + " " +
-    //                    "@Accion = " + _accion + ", " +
-    //                    DAUtileriasSistema.ObjectToSqlString(this, ',', '@');
-
-    //    try
-    //    {
-    //        var dt = cnx.ExecuteQuery(cmdSql);
-    //        var timeOfExecute = DateTime.Now.Subtract(startDate).TotalMilliseconds;
-
-    //        OnSqlOk?.Invoke(this, new DASqlOkEventArgs(Id, timeOfExecute, cnx.InfoMessage, DATransactionType.ConsultarColeccion));
-
-    //        return dt;
-    //    }
-    //    catch (Exception ex)
-    //    {
-    //        MensajesSistema.RegistrarMensaje("No se pudo ejecutar la acción '" + DATransactionType.Consultar.ToString().ToUpper() + "'\n" +
-    //                            "Error: " + ex.Message);
-
-    //        OnSqlError?.Invoke(this, new DASqlErrorEventArgs(ex.Message, cmdSql, cnx.Connection.ConnectionString, DATransactionType.ConsultarColeccion));
-
-    //        throw new Exception(ex.Message);
-    //    }
-    //}
-
     public virtual List<T> ConsultarColeccion(DAConexion cnx)
     {
         //T _obj;
         var startDate = DateTime.Now;
 
-        int _accion = (int)DATransactionType.ConsultarColeccion;
+        int _accion = (int)DATransactionType.SelectColection;
 
         var cmdSql = "";
         var obj = this.GetType();
@@ -292,15 +263,9 @@ public abstract class DASqlBaseV3<T> where T : DASqlBaseV3<T>
                 break;
 
             case DASqlType.Table:
-                cmdSql = DAUtileriasSistema.ObjectToSqlString(DATransactionType.ConsultarColeccion, this);
+                cmdSql = DAUtileriasSistema.ObjectToSqlString(DATransactionType.SelectColection, this);
                 break;
         }
-
-        //string cmdSql = SP_NAME + " " +
-        //                "@Accion = " + _accion + ", " +
-        //                DAUtileriasSistema.ObjectToSqlString(this, ',', '@');
-
-        //cmdSql = "Enc2_Preguntas @Accion = 5, @idencuesta = 759";
 
         try
         {
@@ -311,22 +276,18 @@ public abstract class DASqlBaseV3<T> where T : DASqlBaseV3<T>
 
             var timeOfExecute = DateTime.Now.Subtract(startDate).TotalMilliseconds;
 
-            OnSqlOk?.Invoke(this, new DASqlOkEventArgs(Id, timeOfExecute, cnx.InfoMessage, DATransactionType.ConsultarColeccion));
+            OnSqlOk?.Invoke(this, new DASqlOkEventArgs(Id, timeOfExecute, cnx.InfoMessage, DATransactionType.SelectColection));
 
             return objDestino;
         }
         catch (Exception ex)
         {
-            MensajesSistema.RegistrarMensaje("No se pudo ejecutar la acción '" + DATransactionType.Consultar.ToString().ToUpper() + "'\n" +
+            MensajesSistema.RegistrarMensaje("No se pudo ejecutar la acción '" + DATransactionType.Select.ToString().ToUpper() + "'\n" +
                                 "Error: " + ex.Message);
 
-            OnSqlError?.Invoke(this, new DASqlErrorEventArgs(ex.Message, cmdSql, cnx.Connection.ConnectionString, DATransactionType.ConsultarColeccion));
+            OnSqlError?.Invoke(this, new DASqlErrorEventArgs(ex.Message, cmdSql, cnx.Connection?.ConnectionString ?? string.Empty, DATransactionType.SelectColection));
 
             throw new Exception(ex.Message);
         }
     }
-
-
-    //public abstract IEnumerable<T> ConsultarColeccion(DAConexion cnx);
 }
-
