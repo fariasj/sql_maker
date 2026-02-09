@@ -1,66 +1,66 @@
 # SqlOrm - SQL Server Class Generator for .NET 10
 
-**Generador de clases C# desde SQL Server para .NET 10 LTS**
+**C# Class Generator from SQL Server for .NET 10 LTS**
 
-Este proyecto genera automáticamente clases de C# a partir de las tablas de SQL Server, simplificando el desarrollo de la capa de acceso a datos.
-
----
-
-## 📋 Tabla de Contenidos
-
-- [Características](#características)
-- [Requisitos](#requisitos)
-- [Instalación](#instalación)
-- [Configuración](#configuración)
-- [Uso](#uso)
-- [Migración desde .NET Framework 4.5](#migración-desde-net-framework-45)
-- [Estructura del Proyecto](#estructura-del-proyecto)
-- [Ejemplos de Código](#ejemplos-de-código)
+This project automatically generates C# classes from SQL Server tables, simplifying data access layer development.
 
 ---
 
-## ✨ Características
+## 📋 Table of Contents
 
-- ✅ **Generación Automática**: Crea clases parciales desde tablas de SQL Server
-- ✅ **CRUD Integrado**: Métodos preconfigurados para Alta, Baja, Cambio y Consulta
-- ✅ **Cross-Platform**: Compatible con Linux, macOS y Windows
-- ✅ **.NET 10 LTS**: Última versión LTS de .NET
-- ✅ **Modern C#:** Tipos de referencia anulables y namespaces con ámbito de archivo
-- ✅ **Serialización JSON**: Integración con System.Text.Json
-- ✅ **Transacciones**: Soporte completo para transacciones de base de datos
-
----
-
-## 📦 Requisitos
-
-### Necesario
-
-- **.NET 10 SDK** - [Descargar aquí](https://dotnet.microsoft.com/download/dotnet/10.0)
-- **SQL Server** - Cualquier versión compatible con ADO.NET
-- **IDE Recomendado**: Visual Studio 2022, Visual Studio Code, or JetBrains Rider
-
-### Opcional
-
-- Git para control de versiones
+- [Features](#features)
+- [Requirements](#requirements)
+- [Installation](#installation)
+- [Configuration](#configuration)
+- [Usage](#usage)
+- [Migration from .NET Framework 4.5](#migration-from-net-framework-45)
+- [Project Structure](#project-structure)
+- [Code Examples](#code-examples)
 
 ---
 
-## 🚀 Instalación
+## ✨ Features
 
-### 1. Clonar el Repositorio
+- ✅ **Automatic Generation**: Creates partial classes from SQL Server tables
+- ✅ **Integrated CRUD**: Preconfigured methods for Create, Read, Update, and Delete operations
+- ✅ **Cross-Platform**: Compatible with Linux, macOS, and Windows
+- ✅ **.NET 10 LTS**: Latest LTS version of .NET
+- ✅ **Modern C#:** Nullable reference types and file-scoped namespaces
+- ✅ **JSON Serialization**: Integration with System.Text.Json
+- ✅ **Transactions**: Full support for database transactions
+
+---
+
+## 📦 Requirements
+
+### Required
+
+- **.NET 10 SDK** - [Download here](https://dotnet.microsoft.com/download/dotnet/10.0)
+- **SQL Server** - Any version compatible with ADO.NET
+- **Recommended IDE**: Visual Studio 2022, Visual Studio Code, or JetBrains Rider
+
+### Optional
+
+- Git for version control
+
+---
+
+## 🚀 Installation
+
+### 1. Clone the Repository
 
 ```bash
 git clone <repository-url>
 cd sql_maker/SqlV2
 ```
 
-### 2. Restaurar Dependencias
+### 2. Restore Dependencies
 
 ```bash
 dotnet restore
 ```
 
-### 3. Compilar el Proyecto
+### 3. Build the Project
 
 ```bash
 dotnet build --configuration Release
@@ -68,11 +68,11 @@ dotnet build --configuration Release
 
 ---
 
-## ⚙️ Configuración
+## ⚙️ Configuration
 
-### Archivo de Configuración: `appsettings.json`
+### Configuration File: `appsettings.json`
 
-El proyecto utiliza `appsettings.json` para la configuración (reemplaza el antiguo `App.config`):
+The project uses `appsettings.json` for configuration (replaces the old `App.config`):
 
 ```json
 {
@@ -80,62 +80,62 @@ El proyecto utiliza `appsettings.json` para la configuración (reemplaza el anti
     "cnxDefault": "Server=localhost;Database=netTV;User Id=sa;Password=sql.2014"
   },
   "AppSettings": {
-    // Configuraciones adicionales según necesites
+    // Additional configurations as needed
   }
 }
 ```
 
-### Cambiar la Cadena de Conexión
+### Changing the Connection String
 
-Edita `appsettings.json` y modifica la sección `ConnectionStrings`:
+Edit `appsettings.json` and modify the `ConnectionStrings` section:
 
 ```json
 {
   "ConnectionStrings": {
-    "cnxDefault": "Server=tu-servidor;Database=tu-base-de-datos;User Id=tu-usuario;Password=tu-contraseña"
+    "cnxDefault": "Server=your-server;Database=your-database;User Id=your-user;Password=your-password"
   }
 }
 ```
 
 ---
 
-## 🎯 Uso
+## 🎯 Usage
 
-### Generar Clases desde SQL Server
+### Generating Classes from SQL Server
 
-El programa `Program.cs` genera automáticamente clases parciales:
+The `Program.cs` program automatically generates partial classes:
 
 ```bash
 dotnet run
 ```
 
-Esto generará archivos en el directorio `PartialClass/` con formato:
+This will generate files in the `PartialClass/` directory with the format:
 
 ```csharp
 namespace SqlOrm;
 
 [DAClassAttributes(SqlType = DASqlType.Table)]
-public partial class NombreTabla : DASqlBaseV3<NombreTabla>
+public partial class TableName : DASqlBaseV3<TableName>
 {
     [DAAttributes(IsKeyForDelete = true, IsIdentity = true, IsKeyForUpdate = true, IsKeyForSelect = true, IsSqlParameter = true, SqlColumnName = "id")]
     public int Id { get; set; }
 
-    [DAAttributes(IsSqlParameter = true, SqlColumnName = "Nombre")]
-    public string Nombre { get; set; } = string.Empty;
+    [DAAttributes(IsSqlParameter = true, SqlColumnName = "Name")]
+    public string Name { get; set; } = string.Empty;
 }
 ```
 
 ---
 
-## 🔄 Migración desde .NET Framework 4.5
+## 🔄 Migration from .NET Framework 4.5
 
-Este proyecto fue migrado exitosamente de .NET Framework 4.5 a .NET 10 LTS.
+This project was successfully migrated from .NET Framework 4.5 to .NET 10 LTS.
 
-### Cambios Principales
+### Key Changes
 
-#### ✅ Actualizaciones de APIs
+#### ✅ API Updates
 
-| Antes (.NET Framework 4.5) | Después (.NET 10) |
+| Before (.NET Framework 4.5) | After (.NET 10) |
 |----------------------------|-------------------|
 | `System.Data.SqlClient` | `Microsoft.Data.SqlClient` |
 | `System.Configuration` | `Microsoft.Extensions.Configuration` |
@@ -144,74 +144,74 @@ Este proyecto fue migrado exitosamente de .NET Framework 4.5 a .NET 10 LTS.
 | `System.Runtime.Serialization.Formatters.Binary` | `System.Text.Json` |
 | `WindowsIdentity.GetCurrent().Name` | `Environment.UserName` |
 
-#### ✅ Modernización del Código
+#### ✅ Code Modernization
 
-- **Namespaces con ámbito de archivo** (file-scoped namespaces)
-- **Tipos de referencia anulables** habilitados (`<Nullable>enable</Nullable>`)
-- **Using statements implícitos** (`<ImplicitUsings>enable</ImplicitUsings>`)
-- **Formato de proyecto SDK-style**
+- **File-scoped namespaces**
+- **Nullable reference types** enabled (`<Nullable>enable</Nullable>`)
+- **Implicit using statements** (`<ImplicitUsings>enable</ImplicitUsings>`)
+- **SDK-style project format**
 
-#### ✅ Características Cross-Platform
+#### ✅ Cross-Platform Features
 
-- ✅ Eliminadas dependencias de Windows-only
-- ✅ Compatible con Linux, macOS y Windows
-- ✅ Sin dependencias de System.Web
+- ✅ Removed Windows-only dependencies
+- ✅ Compatible with Linux, macOS, and Windows
+- ✅ No System.Web dependencies
 
 ### Breaking Changes
 
-⚠️ **BinaryFormatter**: Si tenías datos serializados con `BinaryFormatter`, necesitarás migrarlos antes de usar esta versión. El formato de serialización cambió a JSON.
+⚠️ **BinaryFormatter**: If you have data serialized with `BinaryFormatter`, you will need to migrate it before using this version. The serialization format changed to JSON.
 
 ---
 
-## 📁 Estructura del Proyecto
+## 📁 Project Structure
 
 ```
 SqlV2/
-├── Class/                    # Clases parciales personalizadas
+├── Class/                    # Custom partial classes
 │   ├── Pagos.cs
 │   └── ...
-├── PartialClass/             # Clases generadas automáticamente
+├── PartialClass/             # Auto-generated classes
 │   ├── Encuestas.cs
 │   ├── Respuestas.cs
 │   └── ...
-├── Properties/               # Configuración del proyecto
-├── DAConexion.cs             # Gestión de conexiones SQL
-├── DAExtensions.cs           # Métodos de extensión
-├── DAUtileriasSistema.cs     # Utilidades del sistema
-├── DASqlBaseV3.cs           # Base para operaciones CRUD
-├── DAMensajesSistema.cs      # Sistema de mensajes
-├── DAConstantes.cs          # Constantes y atributos
-├── Program.cs                # Punto de entrada
-├── SqlV2.csproj             # Archivo de proyecto
-├── appsettings.json         # Configuración
-└── README.md                # Este archivo
+├── Properties/               # Project configuration
+├── DAConexion.cs             # SQL connection management
+├── DAExtensions.cs           # Extension methods
+├── DAUtileriasSistema.cs     # System utilities
+├── DASqlBaseV3.cs           # Base for CRUD operations
+├── DAMensajesSistema.cs      # Messaging system
+├── DAConstantes.cs          # Constants and attributes
+├── Program.cs                # Entry point
+├── SqlV2.csproj             # Project file
+├── appsettings.json         # Configuration
+└── README.md                # This file
 ```
 
 ---
 
-## 💡 Ejemplos de Código
+## 💡 Code Examples
 
-### 1. Conexión a la Base de Datos
+### 1. Database Connection
 
 ```csharp
 using (var cnx = new DAConexion())
 {
-    // La conexión se abre automáticamente
-    var resultado = cnx.ExecuteQuery("SELECT * FROM Tabla");
+    // Connection opens automatically
+    var result = cnx.ExecuteQuery("SELECT * FROM Table");
 
-    foreach (DataRow row in resultado.Rows)
+    foreach (DataRow row in result.Rows)
     {
-        Console.WriteLine(row["Columna"]);
+        Console.WriteLine(row["Column"]);
     }
 }
 ```
 
-### 2. Insertar un Registro (Alta)
+### 2. Insert a Record (Create)
 
 ```csharp
 using (var cnx = new DAConexion())
 {
-    var nuevoRegistro = new Pagos
+    var newRecord = new Pagos
     {
         IdCliente = 123,
         IdLista = 456,
@@ -219,14 +219,14 @@ using (var cnx = new DAConexion())
         Flag = 1
     };
 
-    if (nuevoRegistro.Guardar(cnx))
+    if (newRecord.Guardar(cnx))
     {
-        Console.WriteLine($"Registro guardado con ID: {nuevoRegistro.Id}");
+        Console.WriteLine($"Record saved with ID: {newRecord.Id}");
     }
 }
 ```
 
-### 3. Consultar un Registro
+### 3. Query a Record
 
 ```csharp
 using (var cnx = new DAConexion())
@@ -235,13 +235,13 @@ using (var cnx = new DAConexion())
 
     if (pago.Consultar(cnx))
     {
-        Console.WriteLine($"Cliente: {pago.IdCliente}");
-        Console.WriteLine($"Fecha: {pago.Fecha}");
+        Console.WriteLine($"Client: {pago.IdCliente}");
+        Console.WriteLine($"Date: {pago.Fecha}");
     }
 }
 ```
 
-### 4. Actualizar un Registro
+### 4. Update a Record
 
 ```csharp
 using (var cnx = new DAConexion())
@@ -256,7 +256,7 @@ using (var cnx = new DAConexion())
 }
 ```
 
-### 5. Eliminar un Registro
+### 5. Delete a Record
 
 ```csharp
 using (var cnx = new DAConexion())
@@ -265,12 +265,12 @@ using (var cnx = new DAConexion())
 
     if (pago.Borrar(cnx))
     {
-        Console.WriteLine("Registro eliminado");
+        Console.WriteLine("Record deleted");
     }
 }
 ```
 
-### 6. Consultar Múltiples Registros
+### 6. Query Multiple Records
 
 ```csharp
 using (var cnx = new DAConexion())
@@ -280,17 +280,17 @@ using (var cnx = new DAConexion())
 
     foreach (var item in lista)
     {
-        Console.WriteLine($"Encuesta: {item.Encuesta}");
+        Console.WriteLine($"Survey: {item.Encuesta}");
     }
 }
 ```
 
-### 7. Uso de Transacciones
+### 7. Using Transactions
 
 ```csharp
 using (var cnx = new DAConexion())
 {
-    // La transacción se maneja automáticamente en Guardar/Modificar/Borrar
+    // Transactions are handled automatically in Guardar/Modificar/Borrar
     var pago = new Pagos
     {
         IdCliente = 123,
@@ -301,31 +301,31 @@ using (var cnx = new DAConexion())
 
     if (pago.Guardar(cnx))
     {
-        Console.WriteLine("Guardado exitosamente con transacción");
+        Console.WriteLine("Successfully saved with transaction");
     }
-    // Si ocurre error, hace rollback automáticamente
+    // Automatically rolls back on error
 }
 ```
 
 ---
 
-## 🔧 Compilación y Ejecución
+## 🔧 Build and Run
 
-### Modo Debug
+### Debug Mode
 
 ```bash
 dotnet build
 dotnet run
 ```
 
-### Modo Release
+### Release Mode
 
 ```bash
 dotnet build --configuration Release
 dotnet run --configuration Release
 ```
 
-### Publicar como Ejecutable
+### Publish as Executable
 
 ```bash
 # Windows
@@ -340,79 +340,79 @@ dotnet publish -c Release -r osx-x64 --self-contained
 
 ---
 
-## 🛠️ Solución de Problemas
+## 🛠️ Troubleshooting
 
 ### Error: "Connection string 'cnxDefault' not found"
 
-**Solución**: Verifica que `appsettings.json` exista y tenga la conexión configurada:
+**Solution**: Verify that `appsettings.json` exists and has the connection configured:
 
 ```json
 {
   "ConnectionStrings": {
-    "cnxDefault": "tu-cadena-de-conexion"
+    "cnxDefault": "your-connection-string"
   }
 }
 ```
 
 ### Error: "Cannot connect to SQL Server"
 
-**Solución**: Verifica:
-1. SQL Server está ejecutándose
-2. La cadena de conexión es correcta
-3. El firewall permite conexiones al puerto 1433
+**Solution**: Verify:
+1. SQL Server is running
+2. The connection string is correct
+3. The firewall allows connections on port 1433
 
-### Warnings de Nullable Reference Types
+### Nullable Reference Types Warnings
 
-**Nota**: Estos warnings son normales al habilitar tipos de referencia anulables en código existente. Se irán resolviendo gradualmente.
+**Note**: These warnings are normal when enabling nullable reference types in existing code. They will be resolved gradually.
 
 ---
 
-## 📚 Referencias y Recursos
+## 📚 References and Resources
 
-- [Documentación de .NET 10](https://docs.microsoft.com/dotnet/core/)
+- [.NET 10 Documentation](https://docs.microsoft.com/dotnet/core/)
 - [Microsoft.Data.SqlClient](https://docs.microsoft.com/sql/connect/ado-net/introduction-microsoft-data-sqlclient-namespace)
 - [System.Text.Json](https://docs.microsoft.com/dotnet/standard/serialization/system-text-json-overview)
-- [Tipos de referencia anulables](https://docs.microsoft.com/dotnet/csharp/nullable-references)
+- [Nullable Reference Types](https://docs.microsoft.com/dotnet/csharp/nullable-references)
 
 ---
 
-## 📝 Notas de Versión
+## 📝 Release Notes
 
-### Versión 2.0 - Migración a .NET 10 LTS
+### Version 2.0 - Migration to .NET 10 LTS
 
-**Fecha**: Febrero 2025
+**Date**: February 2025
 
-**Cambios**:
-- ✅ Migrado de .NET Framework 4.5 a .NET 10 LTS
-- ✅ Proyecto convertido a formato SDK-style
-- ✅ Reemplazadas APIs obsoletas
-- ✅ Soporte multiplataforma completo
-- ✅ Namespace actualizado: `SqlV2` → `SqlOrm`
-- ✅ Modernización con características de C# 10
-
----
-
-## 👥 Autores
-
-- **Abraham Farías** - Autor original de las utilidades de generación de clases
+**Changes**:
+- ✅ Migrated from .NET Framework 4.5 to .NET 10 LTS
+- ✅ Project converted to SDK-style format
+- ✅ Replaced obsolete APIs
+- ✅ Full cross-platform support
+- ✅ Namespace updated: `SqlV2` → `SqlOrm`
+- ✅ Modernization with C# 10 features
 
 ---
 
-## 🤝 Contribuciones
+## 👥 Authors
 
-Las contribuciones son bienvenidas. Por favor:
-1. Fork el proyecto
-2. Crea una rama para tu feature
-3. Commit tus cambios
-4. Push a la rama
-5. Abre un Pull Request
+- **Abraham Farías** - Original author of class generation utilities
 
 ---
 
-## 📧 Contacto
+## 🤝 Contributing
 
-Para preguntas o soporte, por favor abre un issue en el repositorio.
+Contributions are welcome. Please:
+1. Fork the project
+2. Create a branch for your feature
+3. Commit your changes
+4. Push to the branch
+5. Open a Pull Request
 
 ---
 
-**SqlOrm** - Simplificando el desarrollo de la capa de datos en .NET 10
+## 📧 Contact
+
+For questions or support, please open an issue in the repository.
+
+---
+
+**SqlOrm** - Simplifying data access layer development in .NET 10
