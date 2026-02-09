@@ -237,38 +237,6 @@ public abstract class DASqlBaseV3<T> where T : DASqlBaseV3<T>
         }
     }
 
-    //[Obsolete]
-    //public virtual DataTable ConsultarColeccion(DAConexion cnx)
-    //{
-    //    T _obj;
-    //    var startDate = DateTime.Now;
-
-    //    int _accion = (int)DATransactionType.ConsultarColeccion;
-
-    //    string cmdSql = SP_NAME + " " +
-    //                    "@Accion = " + _accion + ", " +
-    //                    DAUtileriasSistema.ObjectToSqlString(this, ',', '@');
-
-    //    try
-    //    {
-    //        var dt = cnx.ExecuteQuery(cmdSql);
-    //        var timeOfExecute = DateTime.Now.Subtract(startDate).TotalMilliseconds;
-
-    //        OnSqlOk?.Invoke(this, new DASqlOkEventArgs(Id, timeOfExecute, cnx.InfoMessage, DATransactionType.ConsultarColeccion));
-
-    //        return dt;
-    //    }
-    //    catch (Exception ex)
-    //    {
-    //        MensajesSistema.RegistrarMensaje("No se pudo ejecutar la acción '" + DATransactionType.Consultar.ToString().ToUpper() + "'\n" +
-    //                            "Error: " + ex.Message);
-
-    //        OnSqlError?.Invoke(this, new DASqlErrorEventArgs(ex.Message, cmdSql, cnx.Connection.ConnectionString, DATransactionType.ConsultarColeccion));
-
-    //        throw new Exception(ex.Message);
-    //    }
-    //}
-
     public virtual List<T> ConsultarColeccion(DAConexion cnx)
     {
         //T _obj;
@@ -299,12 +267,6 @@ public abstract class DASqlBaseV3<T> where T : DASqlBaseV3<T>
                 break;
         }
 
-        //string cmdSql = SP_NAME + " " +
-        //                "@Accion = " + _accion + ", " +
-        //                DAUtileriasSistema.ObjectToSqlString(this, ',', '@');
-
-        //cmdSql = "Enc2_Preguntas @Accion = 5, @idencuesta = 759";
-
         try
         {
             var dt = cnx.ExecuteQuery(cmdSql);
@@ -328,7 +290,4 @@ public abstract class DASqlBaseV3<T> where T : DASqlBaseV3<T>
             throw new Exception(ex.Message);
         }
     }
-
-
-    //public abstract IEnumerable<T> ConsultarColeccion(DAConexion cnx);
 }

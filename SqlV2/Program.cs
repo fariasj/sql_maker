@@ -14,7 +14,7 @@ class Program
             var nameSpace = "EntityGen";
             var tableName = "123";
             var cnxString = @"Host=localhost;Port=5432;Username=postgres;Password=postgres;Database=demo";
-            var pathOfClass = @".\PartialClass\";
+            var pathOfClass = @"~/PartialClass/";
 
             //Pagos
             using (var cnx = new DAConexion(DatabaseType.PostgreSQL, cnxString))
@@ -169,6 +169,8 @@ class Program
 
                 // PostgreSQL specific types
                 case "json": netType = "string"; break;
+                case "integer": netType = "int"; break;
+                case "character": netType = "string"; break;
                 case "jsonb": netType = "string"; break;
                 case "bytea": netType = "Byte[]"; break;
                 case "uuid": netType = "Guid"; break;
@@ -188,6 +190,8 @@ class Program
                 case "path": netType = "string"; break;
                 case "polygon": netType = "string"; break;
                 case "circle": netType = "string"; break;
+                case "timestamp with time zone": netType = "DateTime"; break;
+                case "character varying": netType = "string"; break;
 
                 default: netType = sqlType; break;
             }
