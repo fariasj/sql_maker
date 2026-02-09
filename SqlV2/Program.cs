@@ -26,7 +26,7 @@ class Program
                              "   WHERE CONSTRAINT_TYPE = 'PRIMARY KEY'";
 
                 var xKeys = cnx.ExecuteQuery(cmdSql);
-                var x = cnx.Connection.GetSchema("Tables");
+                var x = cnx.GetSchema("Tables");
 
                 foreach (DataRow z in x.Rows)
                 {

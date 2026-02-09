@@ -19,9 +19,9 @@ public interface IDatabase : IDisposable
     IDbConnection Connection { get; }
 
     /// <summary>
-    /// Gets informational messages from the database
+    /// Gets or sets informational messages from the database
     /// </summary>
-    string InfoMessage { get; }
+    string InfoMessage { get; set; }
 
     /// <summary>
     /// Opens the database connection

@@ -25,9 +25,9 @@ public class SqlServerDatabase : IDatabase
     public IDbConnection Connection => _connection ?? throw new InvalidOperationException("Connection not initialized");
 
     /// <summary>
-    /// Gets informational messages from the database
+    /// Gets or sets informational messages from the database
     /// </summary>
-    public string InfoMessage { get; private set; } = string.Empty;
+    public string InfoMessage { get; set; } = string.Empty;
 
     /// <summary>
     /// Initializes a new instance of the SqlServerDatabase class
