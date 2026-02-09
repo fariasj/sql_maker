@@ -1,15 +1,11 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using System.Data;
 using System.Xml;
 using System.Xml.Serialization;
 using System.ComponentModel;
 using System.Text.Json;
-using System.Text.RegularExpressions;
 
-namespace SqlV2;
+namespace EntityGen;
 
 public static class DAExtensions
 {

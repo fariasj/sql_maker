@@ -1,418 +1,166 @@
-# SqlOrm - SQL Server Class Generator for .NET 10
+# SqlV2 - SQL Server to C# Class Generator
 
-**C# Class Generator from SQL Server for .NET 10 LTS**
+A .NET code generation tool that reads SQL Server database schemas and automatically generates C# POCO classes with data access attributes.
 
-This project automatically generates C# classes from SQL Server tables, simplifying data access layer development.
+## Features
 
----
+- Connects to SQL Server databases
+- Reads table schemas and column information
+- Generates C# partial classes from database tables
+- Automatically detects primary keys and identity columns
+- Maps SQL Server data types to .NET types
+- Generates custom attributes for ORM-like functionality
+- Supports nullable types for appropriate columns
 
-## 📋 Table of Contents
+## Requirements
 
-- [Features](#features)
-- [Requirements](#requirements)
-- [Installation](#installation)
-- [Configuration](#configuration)
-- [Usage](#usage)
-- [Migration from .NET Framework 4.5](#migration-from-net-framework-45)
-- [Project Structure](#project-structure)
-- [Code Examples](#code-examples)
+- .NET Framework 4.5 or higher
+- Visual Studio 2015 or later (or MSBuild)
+- SQL Server database access
+- Newtonsoft.Json (currently referenced from external path - needs NuGet package)
 
----
+## Configuration
 
-## ✨ Features
-
-- ✅ **Automatic Generation**: Creates partial classes from SQL Server tables
-- ✅ **Integrated CRUD**: Preconfigured methods for Create, Read, Update, and Delete operations
-- ✅ **Cross-Platform**: Compatible with Linux, macOS, and Windows
-- ✅ **.NET 10 LTS**: Latest LTS version of .NET
-- ✅ **Modern C#:** Nullable reference types and file-scoped namespaces
-- ✅ **JSON Serialization**: Integration with System.Text.Json
-- ✅ **Transactions**: Full support for database transactions
-
----
-
-## 📦 Requirements
-
-### Required
-
-- **.NET 10 SDK** - [Download here](https://dotnet.microsoft.com/download/dotnet/10.0)
-- **SQL Server** - Any version compatible with ADO.NET
-- **Recommended IDE**: Visual Studio 2022, Visual Studio Code, or JetBrains Rider
-
-### Optional
-
-- Git for version control
-
----
-
-## 🚀 Installation
-
-### 1. Clone the Repository
-
-```bash
-git clone <repository-url>
-cd sql_maker/SqlV2
-```
-
-### 2. Restore Dependencies
-
-```bash
-dotnet restore
-```
-
-### 3. Build the Project
-
-```bash
-dotnet build --configuration Release
-```
-
----
-
-## ⚙️ Configuration
-
-### Configuration File: `appsettings.json`
-
-The project uses `appsettings.json` for configuration (replaces the old `App.config`):
-
-```json
-{
-  "ConnectionStrings": {
-    "cnxDefault": "Server=localhost;Database=netTV;User Id=sa;Password=sql.2014"
-  },
-  "AppSettings": {
-    // Additional configurations as needed
-  }
-}
-```
-
-### Changing the Connection String
-
-Edit `appsettings.json` and modify the `ConnectionStrings` section:
-
-```json
-{
-  "ConnectionStrings": {
-    "cnxDefault": "Server=your-server;Database=your-database;User Id=your-user;Password=your-password"
-  }
-}
-```
-
----
-
-## 🎯 Usage
-
-### Generating Classes from SQL Server
-
-The `Program.cs` program automatically generates partial classes:
-
-```bash
-dotnet run
-```
-
-This will generate files in the `PartialClass/` directory with the format:
+Before running the application, update the following values in `Program.cs`:
 
 ```csharp
-namespace SqlOrm;
-
-[DAClassAttributes(SqlType = DASqlType.Table)]
-public partial class TableName : DASqlBaseV3<TableName>
-{
-    [DAAttributes(IsKeyForDelete = true, IsIdentity = true, IsKeyForUpdate = true, IsKeyForSelect = true, IsSqlParameter = true, SqlColumnName = "id")]
-    public int Id { get; set; }
-
-    [DAAttributes(IsSqlParameter = true, SqlColumnName = "Name")]
-    public string Name { get; set; } = string.Empty;
-}
+// Line 17-20
+var nameSpace = "SqlV2";           // Namespace for generated classes
+var cnxString = @"Server=localhost;Database=netTV;User Id=sa;Password=sql.2014";
+var pathOfClass = @"E:\My Documents\...\PartialClass\";  // Output directory
 ```
 
----
+### Alternative: App.config Connection String
 
-## 🔄 Migration from .NET Framework 4.5
+You can also configure a named connection string in `App.config`:
 
-This project was successfully migrated from .NET Framework 4.5 to .NET 10 LTS.
+```xml
+<connectionStrings>
+  <add name="cnxDefault" connectionString="Server=localhost;Database=YourDatabase;..." />
+</connectionStrings>
+```
 
-### Key Changes
+## Building
 
-#### ✅ API Updates
+### Using Visual Studio
+1. Open `SqlV2.sln`
+2. Fix the Newtonsoft.Json reference (install via NuGet)
+3. Build solution (F6)
 
-| Before (.NET Framework 4.5) | After (.NET 10) |
-|----------------------------|-------------------|
-| `System.Data.SqlClient` | `Microsoft.Data.SqlClient` |
-| `System.Configuration` | `Microsoft.Extensions.Configuration` |
-| `App.config` | `appsettings.json` |
-| `Newtonsoft.Json` | `System.Text.Json` |
-| `System.Runtime.Serialization.Formatters.Binary` | `System.Text.Json` |
-| `WindowsIdentity.GetCurrent().Name` | `Environment.UserName` |
+### Using MSBuild (command line)
+```bash
+msbuild SqlV2.sln /p:Configuration=Release
+```
 
-#### ✅ Code Modernization
+## Running
 
-- **File-scoped namespaces**
-- **Nullable reference types** enabled (`<Nullable>enable</Nullable>`)
-- **Implicit using statements** (`<ImplicitUsings>enable</ImplicitUsings>`)
-- **SDK-style project format**
+1. Ensure configuration is set correctly
+2. Run the executable:
+   - From Visual Studio: F5
+   - From command line: `bin\Debug\SqlV2.exe`
 
-#### ✅ Cross-Platform Features
+The application will:
+- Connect to the specified SQL Server database
+- Iterate through all tables
+- Generate a C# class file for each table in the `PartialClass` directory
+- Display the generated code in the console
 
-- ✅ Removed Windows-only dependencies
-- ✅ Compatible with Linux, macOS, and Windows
-- ✅ No System.Web dependencies
-
-### Breaking Changes
-
-⚠️ **BinaryFormatter**: If you have data serialized with `BinaryFormatter`, you will need to migrate it before using this version. The serialization format changed to JSON.
-
----
-
-## 📁 Project Structure
+## Project Structure
 
 ```
 SqlV2/
-├── Class/                    # Custom partial classes
+├── Program.cs              # Main entry point - class generation logic
+├── DAConexion.cs           # SQL Server connection wrapper
+├── DASqlBaseV3.cs          # Base class for generated entities
+├── DAExtensions.cs         # Extension methods
+├── DAUtileriasSistema.cs   # Utility functions
+├── DAMensajesSistema.cs    # System messages
+├── DAConstantes.cs         # Constants
+├── Animal.cs               # Example/Animal class
+├── PartialClass/           # Generated classes (output directory)
 │   ├── Pagos.cs
-│   └── ...
-├── PartialClass/             # Auto-generated classes
-│   ├── Encuestas.cs
-│   ├── Respuestas.cs
-│   └── ...
-├── Properties/               # Project configuration
-├── DAConexion.cs             # SQL connection management
-├── DAExtensions.cs           # Extension methods
-├── DAUtileriasSistema.cs     # System utilities
-├── DASqlBaseV3.cs           # Base for CRUD operations
-├── DAMensajesSistema.cs      # Messaging system
-├── DAConstantes.cs          # Constants and attributes
-├── Program.cs                # Entry point
-├── SqlV2.csproj             # Project file
-├── appsettings.json         # Configuration
-└── README.md                # This file
+│   └── Encuestas.cs
+└── Class/                  # Additional classes
 ```
 
----
+## Generated Class Example
 
-## 💡 Code Examples
-
-### 1. Database Connection
+For a table named `Pagos`, the tool generates:
 
 ```csharp
-using (var cnx = new DAConexion())
-{
-    // Connection opens automatically
-    var result = cnx.ExecuteQuery("SELECT * FROM Table");
+using System;
 
-    foreach (DataRow row in result.Rows)
+namespace SqlV2
+{
+    [DAClassAttributes(SqlType = DASqlType.Table, SqlSchema = "dbo")]
+    public partial class Pagos : DASqlBaseV3<Pagos>
     {
-        Console.WriteLine(row["Column"]);
+        //*************************
+        //Archivo generado automaticamente por una utilidad de Abraham Farías.
+        //No modificar el archivo a mano.
+        //Fecha generación: 08/02/2026 21:33:00
+        //*************************
+
+        public Pagos()
+        { }
+
+        [DAAttributes(IsIdentity = true, IsKeyForDelete = true,
+                      IsKeyForUpdate = true, IsKeyForSelect = true,
+                      IsSqlParameter = true, SqlColumnName = "PagoId")]
+        public int PagoId { get; set; }
+
+        [DAAttributes(IsNullable = true, IsSqlParameter = true,
+                      SqlColumnName = "Monto")]
+        public decimal? Monto { get; set; }
     }
 }
 ```
 
-### 2. Insert a Record (Create)
+## SQL Type to .NET Type Mapping
 
-```csharp
-using (var cnx = new DAConexion())
-{
-    var newRecord = new Pagos
-    {
-        IdCliente = 123,
-        IdLista = 456,
-        Fecha = DateTime.Now,
-        Flag = 1
-    };
+| SQL Type | .NET Type |
+|----------|-----------|
+| bigint | Int64 |
+| int | int |
+| smallint | Int16 |
+| tinyint | Byte |
+| bit | bool |
+| decimal, money, numeric | decimal |
+| float | double |
+| real | Single |
+| char, nchar, varchar, nvarchar, text, ntext | string |
+| datetime, datetime2, smalldatetime | DateTime |
+| date | DateTime |
+| time | TimeSpan |
+| uniqueidentifier | Guid |
+| binary, varbinary, image, timestamp, rowversion | Byte[] |
+| xml | XDocument |
 
-    if (newRecord.Guardar(cnx))
-    {
-        Console.WriteLine($"Record saved with ID: {newRecord.Id}");
-    }
-}
+## Known Issues
+
+- **Newtonsoft.Json reference**: Currently points to an absolute path that won't work across machines. Fix by installing via NuGet:
+  ```bash
+  Install-Package Newtonsoft.Json
+  ```
+
+- **Hardcoded paths**: Connection strings and output paths are hardcoded in `Program.cs`
+
+- **.NET Framework version**: Project uses .NET Framework 4.5. Consider upgrading to .NET 6/7/8 for modern features
+
+## Database Stored Procedure
+
+The application relies on `SP_Columns` stored procedure which returns column metadata for a given table and schema:
+
+```sql
+EXEC SP_Columns @TableName, @Schema
 ```
 
-### 3. Query a Record
+Ensure this procedure exists in your database or provide an alternative method to query column metadata.
 
-```csharp
-using (var cnx = new DAConexion())
-{
-    var pago = new Pagos { Id = 1 };
+## License
 
-    if (pago.Consultar(cnx))
-    {
-        Console.WriteLine($"Client: {pago.IdCliente}");
-        Console.WriteLine($"Date: {pago.Fecha}");
-    }
-}
-```
+This project appears to be an internal utility. Please verify licensing before redistribution.
 
-### 4. Update a Record
+## Author
 
-```csharp
-using (var cnx = new DAConexion())
-{
-    var pago = new Pagos { Id = 1 };
-
-    if (pago.Consultar(cnx))
-    {
-        pago.Fecha = DateTime.Now;
-        pago.Modificar(cnx);
-    }
-}
-```
-
-### 5. Delete a Record
-
-```csharp
-using (var cnx = new DAConexion())
-{
-    var pago = new Pagos { Id = 1 };
-
-    if (pago.Borrar(cnx))
-    {
-        Console.WriteLine("Record deleted");
-    }
-}
-```
-
-### 6. Query Multiple Records
-
-```csharp
-using (var cnx = new DAConexion())
-{
-    var encuesta = new Encuestas();
-    var lista = encuesta.ConsultarColeccion(cnx);
-
-    foreach (var item in lista)
-    {
-        Console.WriteLine($"Survey: {item.Encuesta}");
-    }
-}
-```
-
-### 7. Using Transactions
-
-```csharp
-using (var cnx = new DAConexion())
-{
-    // Transactions are handled automatically in Guardar/Modificar/Borrar
-    var pago = new Pagos
-    {
-        IdCliente = 123,
-        IdLista = 456,
-        Fecha = DateTime.Now,
-        Flag = 1
-    };
-
-    if (pago.Guardar(cnx))
-    {
-        Console.WriteLine("Successfully saved with transaction");
-    }
-    // Automatically rolls back on error
-}
-```
-
----
-
-## 🔧 Build and Run
-
-### Debug Mode
-
-```bash
-dotnet build
-dotnet run
-```
-
-### Release Mode
-
-```bash
-dotnet build --configuration Release
-dotnet run --configuration Release
-```
-
-### Publish as Executable
-
-```bash
-# Windows
-dotnet publish -c Release -r win-x64 --self-contained
-
-# Linux
-dotnet publish -c Release -r linux-x64 --self-contained
-
-# macOS
-dotnet publish -c Release -r osx-x64 --self-contained
-```
-
----
-
-## 🛠️ Troubleshooting
-
-### Error: "Connection string 'cnxDefault' not found"
-
-**Solution**: Verify that `appsettings.json` exists and has the connection configured:
-
-```json
-{
-  "ConnectionStrings": {
-    "cnxDefault": "your-connection-string"
-  }
-}
-```
-
-### Error: "Cannot connect to SQL Server"
-
-**Solution**: Verify:
-1. SQL Server is running
-2. The connection string is correct
-3. The firewall allows connections on port 1433
-
-### Nullable Reference Types Warnings
-
-**Note**: These warnings are normal when enabling nullable reference types in existing code. They will be resolved gradually.
-
----
-
-## 📚 References and Resources
-
-- [.NET 10 Documentation](https://docs.microsoft.com/dotnet/core/)
-- [Microsoft.Data.SqlClient](https://docs.microsoft.com/sql/connect/ado-net/introduction-microsoft-data-sqlclient-namespace)
-- [System.Text.Json](https://docs.microsoft.com/dotnet/standard/serialization/system-text-json-overview)
-- [Nullable Reference Types](https://docs.microsoft.com/dotnet/csharp/nullable-references)
-
----
-
-## 📝 Release Notes
-
-### Version 2.0 - Migration to .NET 10 LTS
-
-**Date**: February 2025
-
-**Changes**:
-- ✅ Migrated from .NET Framework 4.5 to .NET 10 LTS
-- ✅ Project converted to SDK-style format
-- ✅ Replaced obsolete APIs
-- ✅ Full cross-platform support
-- ✅ Namespace updated: `SqlV2` → `SqlOrm`
-- ✅ Modernization with C# 10 features
-
----
-
-## 👥 Authors
-
-- **Abraham Farías** - Original author of class generation utilities
-
----
-
-## 🤝 Contributing
-
-Contributions are welcome. Please:
-1. Fork the project
-2. Create a branch for your feature
-3. Commit your changes
-4. Push to the branch
-5. Open a Pull Request
-
----
-
-## 📧 Contact
-
-For questions or support, please open an issue in the repository.
-
----
-
-**SqlOrm** - Simplifying data access layer development in .NET 10
+Generated by a utility of Abraham Farías.

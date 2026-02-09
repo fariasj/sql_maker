@@ -1,8 +1,7 @@
-using System;
 using System.Reflection;
 using System.ComponentModel;
 
-namespace SqlV2;
+namespace EntityGen;
 
 //[Serializable]
 //public struct KeyValuePair<K, V>
@@ -31,13 +30,13 @@ public enum DACondicional
 
 public enum DATransactionType
 {
-    Borrar = 4,
-    Consultar = 3,
-    Alta = 1,
-    Actualizar = 2,
-    ConsultarColeccion = 5,
-    BorrarColeccion = 6,
-    Copiar = 7,
+    Delete = 4,
+    Select = 3,
+    Add = 1,
+    Update = 2,
+    SelectColection = 5,
+    DeleteColection = 6,
+    Copy = 7,
     ConsultaColeccionPorusuario
 }
 

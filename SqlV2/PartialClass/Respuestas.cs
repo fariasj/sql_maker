@@ -1,6 +1,4 @@
-using System;
-
-namespace SqlV2;
+namespace EntityGen;
 
 [DAClassAttributes(SqlType = DASqlType.Table)]
 public partial class Respuestas : DASqlBaseV3<Respuestas>

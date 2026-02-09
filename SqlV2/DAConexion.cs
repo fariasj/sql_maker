@@ -1,12 +1,10 @@
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Data.Common;
 using System.Data;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
 
-namespace SqlV2;
+namespace EntityGen;
 
 public delegate void DAConexionEventHandler(object sender, DAConexionEventArgs e);
 

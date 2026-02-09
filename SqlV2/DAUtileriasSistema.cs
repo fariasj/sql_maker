@@ -1,10 +1,6 @@
-using System;
 using System.Collections;
-using System.Collections.Generic;
 using System.Data;
 using System.Diagnostics;
-using System.IO;
-using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Xml;
@@ -14,7 +10,7 @@ using System.Globalization;
 using System.Text.Json;
 using Microsoft.Extensions.Configuration;
 
-namespace SqlV2;
+namespace EntityGen;
 
 public static class DAUtileriasSistema
 {
@@ -225,17 +221,17 @@ public static class DAUtileriasSistema
 
                 switch (typeOfTransaction)
                 {
-                    case DATransactionType.Borrar:
+                    case DATransactionType.Delete:
                         isKeyUpdate = false;
                         // keyDeleteValues = new Dictionary<string, string>();
                         break;
 
-                    case DATransactionType.Actualizar:
+                    case DATransactionType.Update:
                         isKeyDelete = false;
                         //keyUpdateValues = new Dictionary<string, string>();
                         break;
 
-                    case DATransactionType.Consultar:
+                    case DATransactionType.Select:
 
                         break;
                 }
@@ -250,7 +246,7 @@ public static class DAUtileriasSistema
                     parameterName = columnName;
                 }
 
-                if (typeOfTransaction == DATransactionType.Alta || typeOfTransaction == DATransactionType.Actualizar)
+                if (typeOfTransaction == DATransactionType.Add || typeOfTransaction == DATransactionType.Update)
                 {
                     if ((!isNullable) && (parameterValue == null))
                     {
@@ -337,7 +333,7 @@ public static class DAUtileriasSistema
                         break;
                 }
 
-                if (typeOfTransaction != DATransactionType.Alta)
+                if (typeOfTransaction != DATransactionType.Add)
                 {
                     bool isKey = false;
                     if (isKeyDelete)
@@ -381,7 +377,7 @@ public static class DAUtileriasSistema
         var contador = 0;
         switch (typeOfTransaction)
         {
-            case DATransactionType.Alta:
+            case DATransactionType.Add:
                 strDummy = "Insert into " + tableName + "\t";
                 var stColumns = "";
                 var stValues = "";
@@ -400,8 +396,8 @@ public static class DAUtileriasSistema
                 strDummy = strDummy + stColumns + "\nValues \t" + stValues;
                 break;
 
-            case DATransactionType.BorrarColeccion:
-            case DATransactionType.Borrar:
+            case DATransactionType.DeleteColection:
+            case DATransactionType.Delete:
                 strDummy = "Delete From " + tableName + "\n";
                 //int contador = 0;
 
@@ -424,7 +420,7 @@ public static class DAUtileriasSistema
 
                 break;
 
-            case DATransactionType.Actualizar:
+            case DATransactionType.Update:
 
                 if (keyUpdateValues.Count <= 0)
                 {
@@ -460,8 +456,8 @@ public static class DAUtileriasSistema
 
                 break;
 
-            case DATransactionType.ConsultarColeccion:
-            case DATransactionType.Consultar:
+            case DATransactionType.SelectColection:
+            case DATransactionType.Select:
 
                 strDummy = "Select * From " + tableName + "\n\t";
 

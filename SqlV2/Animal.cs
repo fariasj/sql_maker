@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace SqlV2
+﻿namespace EntityGen
 {
     [DAClassAttributes(SqlTableName = "tbl_animal", SqlType = DASqlType.Table)]
     class Animal : DASqlBaseV3<Animal>

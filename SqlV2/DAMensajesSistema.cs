@@ -1,9 +1,7 @@
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Data;
 
-namespace SqlV2;
+namespace EntityGen;
 
 public class DAMensajesSistema
 {

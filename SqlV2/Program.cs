@@ -1,10 +1,7 @@
-﻿using System;
-using System.Data;
-using System.IO;
-using System.Linq;
+﻿using System.Data;
 using System.Text;
 
-namespace SqlV2;
+namespace EntityGen;
 
 class Program
 {
@@ -14,7 +11,7 @@ class Program
         /// <param name="args"></param>
         static void Main(string[] args)
         {
-            var nameSpace = "SqlV2";
+            var nameSpace = "EntityGen";
             var tableName = "123";
             var cnxString = @"Server=localhost;Database=netTV;User Id=sa;Password=sql.2014";
             var pathOfClass = @"E:\My Documents\Visual Studio 2015\Team Projects\EnergyTech\SqlV2\SqlV2\PartialClass\";
