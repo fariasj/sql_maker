@@ -1,4 +1,4 @@
-﻿using System.Data;
+using System.Data;
 using System.Text;
 
 namespace EntityGen;
@@ -13,11 +13,11 @@ class Program
         {
             var nameSpace = "EntityGen";
             var tableName = "123";
-            var cnxString = @"Server=localhost;Database=netTV;User Id=sa;Password=sql.2014";
-            var pathOfClass = @"E:\My Documents\Visual Studio 2015\Team Projects\EnergyTech\SqlV2\SqlV2\PartialClass\";
+            var cnxString = @"Host=localhost;Port=5432;Username=postgres;Password=postgres;Database=demo";
+            var pathOfClass = @".\PartialClass\";
 
             //Pagos
-            using (var cnx = new DAConexion(cnxString))
+            using (var cnx = new DAConexion(DatabaseType.PostgreSQL, cnxString))
             {
                 var cmdSql = " SELECT * " +
                              " FROM INFORMATION_SCHEMA.CONSTRAINT_COLUMN_USAGE " +
@@ -35,9 +35,24 @@ class Program
                         Directory.CreateDirectory(pathOfClass);
                     }
 
-                    tableName = z[2].ToString();
-                    var sqlSchema = z[1].ToString();
-                    cmdSql = "SP_Columns " + tableName + "," + sqlSchema;
+                    tableName = z[1].ToString();
+                    var sqlSchema = z[0].ToString();
+
+                    // Generic query using information_schema (works with SQL Server and PostgreSQL)
+                    cmdSql = @"SELECT
+                                column_name AS COLUMN_NAME,
+                                data_type AS TYPE_NAME,
+                                character_maximum_length AS LENGTH,
+                                is_nullable AS IS_NULLABLE,
+                                column_default AS DEFAULT_VALUE,
+                                ordinal_position AS ORDINAL_POSITION
+                               FROM
+                                information_schema.columns
+                               WHERE
+                                table_schema = '" + sqlSchema + @"'
+                                AND table_name = '" + tableName + @"'
+                               ORDER BY
+                                ordinal_position";
 
                     var keysOfTable = (from DataRow dt in xKeys.Rows
                                        where dt.GetValue<string>("TABLE_NAME") == tableName
@@ -70,7 +85,7 @@ class Program
                     {
                         var sqlTypeName = y.GetValue<string>("TYPE_NAME");
 
-                        var isNullable = (y.GetValue<string>("IS_NULLABLE") == "YES");
+                        var isNullable = y.GetValue<string>("IS_NULLABLE") == "YES";
 
                         var columnName = y.GetValue<string>("COLUMN_NAME");
                         var isIdentity = keysOfTable.Contains(columnName); //(sqlTypeName.Split(' ').Count() > 1 ? true : false);
@@ -151,6 +166,28 @@ class Program
                 case "varchar": netType = "string"; break;
                 case "xml": netType = "XDocument"; break;
                 case "sysname": netType = "string"; break;
+
+                // PostgreSQL specific types
+                case "json": netType = "string"; break;
+                case "jsonb": netType = "string"; break;
+                case "bytea": netType = "Byte[]"; break;
+                case "uuid": netType = "Guid"; break;
+                case "interval": netType = "TimeSpan"; break;
+                case "cidr": netType = "string"; break;
+                case "inet": netType = "string"; break;
+                case "macaddr": netType = "string"; break;
+                case "macaddr8": netType = "string"; break;
+                case "pg_lsn": netType = "string"; break;
+                case "tsquery": netType = "string"; break;
+                case "tsvector": netType = "string"; break;
+                case "txid_snapshot": netType = "string"; break;
+                case "point": netType = "string"; break;
+                case "line": netType = "string"; break;
+                case "lseg": netType = "string"; break;
+                case "box": netType = "string"; break;
+                case "path": netType = "string"; break;
+                case "polygon": netType = "string"; break;
+                case "circle": netType = "string"; break;
 
                 default: netType = sqlType; break;
             }
