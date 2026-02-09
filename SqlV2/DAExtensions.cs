@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -6,9 +6,10 @@ using System.Data;
 using System.Xml;
 using System.Xml.Serialization;
 using System.ComponentModel;
-using Newtonsoft.Json;
+using System.Text.Json;
 using System.Text.RegularExpressions;
-//using Newtonsoft.Json;
+
+namespace SqlV2;
 
 public static class DAExtensions
 {
@@ -53,7 +54,7 @@ public static class DAExtensions
 
     public static string ToDescription(this Enum value)
     {
-        var da = (DescriptionAttribute[])(value.GetType().GetField(value.ToString())).GetCustomAttributes(typeof(DescriptionAttribute), false);
+        var da = (DescriptionAttribute[])(value.GetType().GetField(value.ToString())?.GetCustomAttributes(typeof(DescriptionAttribute), false) ?? Array.Empty<DescriptionAttribute>());
         return da.Length > 0 ? da[0].Description : value.ToString();
     }
 
@@ -64,7 +65,7 @@ public static class DAExtensions
         return new string(charArray);
     }
 
-    public static object GetDefaultValue(this Type t)
+    public static object? GetDefaultValue(this Type t)
     {
         if (t.IsValueType && Nullable.GetUnderlyingType(t) == null)
             return Activator.CreateInstance(t);
@@ -72,14 +73,14 @@ public static class DAExtensions
             return null;
     }
 
-    public static T Parse<T>(this string value)
+    public static T? Parse<T>(this string value)
     {
-        T result = default(T);
+        T? result = default(T);
 
         if (!string.IsNullOrEmpty(value))
         {
             TypeConverter tc = TypeDescriptor.GetConverter(typeof(T));
-            result = (T)tc.ConvertFrom(value);
+            result = (T?)tc.ConvertFrom(value);
         }
 
         return result;
@@ -98,7 +99,7 @@ public static class DAExtensions
         }
     }
 
-    public static bool IsNullOrEmpty(this string x)
+    public static bool IsNullOrEmpty(this string? x)
     {
         return string.IsNullOrEmpty(x);
     }
@@ -139,7 +140,7 @@ public static class DAExtensions
         return x.Replace(",", "").Replace("$", "");
     }
 
-    public static string ToSqlString(this string x)
+    public static string ToSqlString(this string? x)
     {
         if ((x == null))
         {
@@ -185,7 +186,7 @@ public static class DAExtensions
         return DAUtileriasSistema.DecodeFromBase64(x, true);
     }
 
-    public static string ToTitleCase(this string mText)
+    public static string ToTitleCase(this string? mText)
     {
         if (mText == null) return mText;
 
@@ -220,7 +221,7 @@ public static class DAExtensions
         return number.CompareTo(minNumber) >= 0 && number.CompareTo(maxNumber) < 0;
     }
 
-    public static XmlDocument ToXml<T>(this T obj)
+    public static XmlDocument? ToXml<T>(this T obj)
     {
         try
         {
@@ -234,21 +235,30 @@ public static class DAExtensions
 
     public static string ToJSon<T>(this T obj)
     {
-        string json = JsonConvert.SerializeObject(obj);
+        var options = new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true,
+            WriteIndented = true
+        };
+        string json = JsonSerializer.Serialize(obj, options);
         return json;
     }
 
-    public static T ToObject<T>(this string x)
+    public static T? ToObject<T>(this string x)
     {
         return DAUtileriasSistema.XmlToObject<T>(x);
     }
 
-    public static T FromJson<T>(this string x)
+    public static T? FromJson<T>(this string x)
     {
-        return JsonConvert.DeserializeObject<T>(x);
+        var options = new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true
+        };
+        return JsonSerializer.Deserialize<T>(x, options);
     }
 
-    public static XmlDocument ToXml<T>(this T obj, XmlSerializerNamespaces nameSpaces)
+    public static XmlDocument? ToXml<T>(this T obj, XmlSerializerNamespaces? nameSpaces)
     {
         return DAUtileriasSistema.ObjectToXml(obj, nameSpaces);
     }
@@ -258,7 +268,7 @@ public static class DAExtensions
         return DAUtileriasSistema.TransformXml(stringXSLT, xmlDocument.OuterXml);
     }
 
-    public static T GetValue<T>(this DataRow r, string columnName)
+    public static T? GetValue<T>(this DataRow r, string columnName)
     {
         try
         {
@@ -362,4 +372,3 @@ public static class DAExtensions
     //    return DAUtileriasSistema.ObjectToJson(obj);
     //}
 }
-

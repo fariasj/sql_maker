@@ -4,10 +4,10 @@ using System.IO;
 using System.Linq;
 using System.Text;
 
-namespace SqlV2
+namespace SqlV2;
+
+class Program
 {
-    class Program
-    {
         /// <summary>
         /// 
         /// </summary>
@@ -161,4 +161,3 @@ namespace SqlV2
             return netType;
         }
     }
-}

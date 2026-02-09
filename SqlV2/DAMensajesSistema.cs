@@ -1,8 +1,9 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Data;
 
+namespace SqlV2;
 
 public class DAMensajesSistema
 {
@@ -16,8 +17,8 @@ public class DAMensajesSistema
     public class RegistroMensaje
     {
         public TipoMensaje TipoMensaje;
-        public string TextoMensaje;
-        public string Contexto;
+        public string TextoMensaje = string.Empty;
+        public string Contexto = string.Empty;
         public DateTime Fecha;
 
         public RegistroMensaje()
@@ -29,11 +30,10 @@ public class DAMensajesSistema
     }
 
     [DebuggerBrowsable(DebuggerBrowsableState.Never)]
-    private List<RegistroMensaje> mensajes;
+    private List<RegistroMensaje> mensajes = new List<RegistroMensaje>();
 
     public DAMensajesSistema()
     {
-        mensajes = new List<RegistroMensaje>();
     }
 
     public void Inicializar()
@@ -46,7 +46,7 @@ public class DAMensajesSistema
         get
         {
             DataTable dTable = new DataTable("MensajesSistema");
-            DataRow dRow;
+            DataRow? dRow;
 
             dTable.Columns.Add("Tipo Mensaje");
             dTable.Columns.Add("Texto Mensaje");
@@ -99,15 +99,15 @@ public class DAMensajesSistema
 
         if (String.IsNullOrEmpty(contexto.Trim()))
         {
-            foreach (StackFrame stackFrame in stackFrames)
+            foreach (StackFrame? stackFrame in stackFrames)
             {
-                if (stackFrame.GetMethod().Module.Name.Contains("RH."))
+                if (stackFrame != null && stackFrame.GetMethod()?.Module?.Name?.Contains("RH.") == true)
                 {
                     if (registroMensaje.Contexto != string.Empty)
                     {
                         registroMensaje.Contexto += " -> ";
                     }
-                    registroMensaje.Contexto += stackFrame.GetMethod().Module.Name + "." + stackFrame.GetMethod().Name + " (" + stackFrame.GetFileLineNumber().ToString() + ")";
+                    registroMensaje.Contexto += stackFrame.GetMethod()?.Module?.Name + "." + stackFrame.GetMethod()?.Name + " (" + stackFrame.GetFileLineNumber().ToString() + ")";
                 }
                 else
                 {
@@ -144,7 +144,7 @@ public class DAMensajesSistema
     {
         string str = string.Empty;
 
-        for (int i = mensajes.Count - 1; i <= mensajes.Count; i--)
+        for (int i = mensajes.Count - 1; i <= mensajes.Count; i++)
         {
             if (i < 0)
             {
@@ -176,4 +176,3 @@ public class DAMensajesSistema
         }
     }
 }
-

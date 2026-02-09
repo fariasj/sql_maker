@@ -1,23 +1,23 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Web;
+using System.Diagnostics;
 using System.Data.Common;
 using System.Data;
-using System.Data.SqlClient;
-//using System.Web.Configuration;
-using System.Diagnostics;
-using System.Configuration;
+using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Configuration;
+
+namespace SqlV2;
 
 public delegate void DAConexionEventHandler(object sender, DAConexionEventArgs e);
+
 public class DAConexionEventArgs : EventArgs
 {
     //public string _msg;
-    public string Cmd;
-    public SqlConnection ConnectionString;
+    public string Cmd { get; set; } = string.Empty;
+    public SqlConnection? ConnectionString { get; set; }
     //public string CurrentMethod;
 
-    public DAConexionEventArgs(string sqlcmd, SqlConnection sqlConnection)
+    public DAConexionEventArgs(string sqlcmd, SqlConnection? sqlConnection)
     {
         StackTrace trace = new StackTrace();
         StackFrame frame = new StackFrame(2);
@@ -27,12 +27,12 @@ public class DAConexionEventArgs : EventArgs
 
         Cmd = "";
 
-        if (method.DeclaringType.Name != "DAConexion")
+        if (method?.DeclaringType?.Name != "DAConexion")
         {
-            Cmd += DateTime.Now.ToString("dd/MM/yyyy hh:mm:ss") + "|" + DAConstantes.CurrentUser + "|" + method.DeclaringType + " - " + method.Name + "\t| " + sqlcmd;
+            Cmd += DateTime.Now.ToString("dd/MM/yyyy hh:mm:ss") + "|" + DAConstantes.CurrentUser + "|" + method?.DeclaringType + " - " + method?.Name + "\t| " + sqlcmd;
         }
 
-        //var s = 
+        //var s =
         ConnectionString = sqlConnection;
     }
 }
@@ -44,25 +44,32 @@ public class DAConexion : IDisposable
         Debug.WriteLineIf(Debugger.IsAttached && !e.Cmd.IsNullOrEmpty(), e.Cmd);
     }
 
-    private string cadconexion;
-    SqlConnection sqlConexion;
+    private string cadconexion = string.Empty;
+    private SqlConnection? sqlConexion;
 
-    public string InfoMessage { get; set; }
+    public string InfoMessage { get; set; } = string.Empty;
 
-    public event DAConexionEventHandler OnExecuteQuery;
+    public event DAConexionEventHandler? OnExecuteQuery;
 
-    public SqlConnection Connection
+    public SqlConnection? Connection
     {
         get { return sqlConexion; }
     }
 
-    SqlTransaction sqlTransaction;
-    SqlCommand sqlCommand;
+    private SqlTransaction? sqlTransaction;
+    private SqlCommand? sqlCommand;
     private bool disposed = false;
 
     public DAConexion()
     {
-        cadconexion = ConfigurationManager.ConnectionStrings["cnxDefault"].ToString();
+        var configuration = new ConfigurationBuilder()
+            .SetBasePath(Directory.GetCurrentDirectory())
+            .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+            .Build();
+
+        cadconexion = configuration.GetConnectionString("cnxDefault")
+            ?? throw new Exception("Connection string 'cnxDefault' not found in appsettings.json");
+
         OnExecuteQuery += Cnx_OnExecuteQuery;
 
         CrearDbConnection();
@@ -80,8 +87,11 @@ public class DAConexion : IDisposable
     {
         if (sqlTransaction == null)
         {
-            sqlTransaction = sqlConexion.BeginTransaction();
-            sqlCommand.Transaction = sqlTransaction;
+            sqlTransaction = sqlConexion?.BeginTransaction();
+            if (sqlCommand != null)
+            {
+                sqlCommand.Transaction = sqlTransaction;
+            }
 
             return true;
         }
@@ -94,11 +104,17 @@ public class DAConexion : IDisposable
     public void CommitTransaction()
     {
         // No se pregunta si es null porque la idea es que ocurra un error si se utiliza mal
-        sqlTransaction.Commit();
-        sqlTransaction.Dispose();
-        sqlTransaction = null;
+        if (sqlTransaction != null)
+        {
+            sqlTransaction.Commit();
+            sqlTransaction.Dispose();
+            sqlTransaction = null;
+        }
 
-        sqlCommand.Transaction = null;
+        if (sqlCommand != null)
+        {
+            sqlCommand.Transaction = null;
+        }
     }
 
     public void RollbackTransaction()
@@ -111,45 +127,55 @@ public class DAConexion : IDisposable
             sqlTransaction.Dispose();
             sqlTransaction = null;
 
-            sqlCommand.Transaction = null;
+            if (sqlCommand != null)
+            {
+                sqlCommand.Transaction = null;
+            }
         }
     }
 
     public string ExecuteScalar(string cmdSql)
     {
-        OnExecuteQuery?.Invoke(this, new DAConexionEventArgs(cmdSql, this.Connection));
+        OnExecuteQuery?.Invoke(this, new DAConexionEventArgs(cmdSql, this.Connection!));
 
-        return ExecuteQuery(cmdSql).Rows[0][0].ToString();
+        return ExecuteQuery(cmdSql).Rows[0][0]?.ToString() ?? string.Empty;
     }
 
     public DataRow ExecuteAndGetFirstRow(string cmdSql)
     {
-        OnExecuteQuery?.Invoke(this, new DAConexionEventArgs(cmdSql, this.Connection));
+        OnExecuteQuery?.Invoke(this, new DAConexionEventArgs(cmdSql, this.Connection!));
 
         return ExecuteQuery(cmdSql).Rows[0];
     }
 
     public DataSet ExecuteQueryDataSet(string cmdSql)
     {
-        OnExecuteQuery?.Invoke(this, new DAConexionEventArgs(cmdSql, this.Connection));
+        OnExecuteQuery?.Invoke(this, new DAConexionEventArgs(cmdSql, this.Connection!));
 
-        DbDataAdapter dbDataAdapter;
+        DbDataAdapter? dbDataAdapter;
         DataSet dtTable = new DataSet();
 
         dtTable.Clear();
 
-        sqlCommand.CommandText = cmdSql;
-        dbDataAdapter = new SqlDataAdapter();
-        dbDataAdapter.SelectCommand = sqlCommand;
+        if (sqlCommand != null)
+        {
+            sqlCommand.CommandText = cmdSql;
+            dbDataAdapter = new SqlDataAdapter();
+            dbDataAdapter.SelectCommand = sqlCommand;
 
-        try
-        {
-            dbDataAdapter.Fill(dtTable);
+            try
+            {
+                dbDataAdapter.Fill(dtTable);
+            }
+            catch (Exception ex)
+            {
+                //throw new Exception(ex.Message + Environment.NewLine + cmdSql);
+                throw new Exception(ex.Message + Environment.NewLine);
+            }
         }
-        catch (Exception ex)
+        else
         {
-            //throw new Exception(ex.Message + Environment.NewLine + cmdSql);
-            throw new Exception(ex.Message + Environment.NewLine);
+            throw new Exception("SQL Command not initialized");
         }
 
         return dtTable;
@@ -157,40 +183,47 @@ public class DAConexion : IDisposable
 
     public DataTable ExecuteQuery(string cmdSql)
     {
-        OnExecuteQuery?.Invoke(this, new DAConexionEventArgs(cmdSql, this.Connection));
+        OnExecuteQuery?.Invoke(this, new DAConexionEventArgs(cmdSql, this.Connection!));
 
         return ExecuteQuery(cmdSql, false);
     }
 
     public DataTable ExecuteQuery(string cmdSql, bool throwEmptyData)
     {
-        OnExecuteQuery?.Invoke(this, new DAConexionEventArgs(cmdSql, this.Connection));
+        OnExecuteQuery?.Invoke(this, new DAConexionEventArgs(cmdSql, this.Connection!));
 
-        DbDataAdapter dbDataAdapter;
+        DbDataAdapter? dbDataAdapter;
         DataTable dtTable = new DataTable();
 
         dtTable.Clear();
 
-        sqlCommand.CommandText = cmdSql;
-        dbDataAdapter = new SqlDataAdapter();
-        dbDataAdapter.SelectCommand = sqlCommand;
+        if (sqlCommand != null)
+        {
+            sqlCommand.CommandText = cmdSql;
+            dbDataAdapter = new SqlDataAdapter();
+            dbDataAdapter.SelectCommand = sqlCommand;
 
-        try
-        {
-            dbDataAdapter.Fill(dtTable);
-        }
-        catch (Exception ex)
-        {
-            //throw new Exception(ex.Message + Environment.NewLine + cmdSql);
-            throw new Exception(ex.Message + Environment.NewLine);
-        }
-
-        if (throwEmptyData)
-        {
-            if (dtTable.Rows.Count <= 0)
+            try
             {
-                throw new Exception("No se encontró información");
+                dbDataAdapter.Fill(dtTable);
             }
+            catch (Exception ex)
+            {
+                //throw new Exception(ex.Message + Environment.NewLine + cmdSql);
+                throw new Exception(ex.Message + Environment.NewLine);
+            }
+
+            if (throwEmptyData)
+            {
+                if (dtTable.Rows.Count <= 0)
+                {
+                    throw new Exception("No se encontró información");
+                }
+            }
+        }
+        else
+        {
+            throw new Exception("SQL Command not initialized");
         }
 
         return dtTable;
@@ -206,7 +239,7 @@ public class DAConexion : IDisposable
         try
         {
             sqlConexion.Open();
-            sqlCommand = (SqlCommand)CrearDbCommand(0);
+            sqlCommand = (SqlCommand?)CrearDbCommand(0);
         }
         catch (Exception ex)
         {
@@ -224,14 +257,16 @@ public class DAConexion : IDisposable
         }
     }
 
-    private void SqlConexion_InfoMessage(object sender, SqlInfoMessageEventArgs e)
+    private void SqlConexion_InfoMessage(object? sender, SqlInfoMessageEventArgs e)
     {
         InfoMessage = e.Message + "\n" + e.Source + "\n" + e.Errors;
         //throw new NotImplementedException();
     }
 
-    private DbCommand CrearDbCommand(int timeOut)
+    private DbCommand? CrearDbCommand(int timeOut)
     {
+        if (sqlConexion == null) return null;
+
         DbCommand dbCommand;
         string commandTimeout = timeOut.ToString();
 
@@ -249,18 +284,25 @@ public class DAConexion : IDisposable
 
     public int ExecuteNonQuery(string cmdSql)
     {
-        OnExecuteQuery?.Invoke(this, new DAConexionEventArgs(cmdSql, this.Connection));
+        OnExecuteQuery?.Invoke(this, new DAConexionEventArgs(cmdSql, this.Connection!));
 
-        sqlCommand.CommandText = cmdSql;
-
-        try
+        if (sqlCommand != null)
         {
-            return sqlCommand.ExecuteNonQuery();
+            sqlCommand.CommandText = cmdSql;
+
+            try
+            {
+                return sqlCommand.ExecuteNonQuery();
+            }
+            catch (Exception ex)
+            {
+                //throw new Exception(ex.Message + Environment.NewLine + cmdSql);
+                throw new Exception(ex.Message + Environment.NewLine);
+            }
         }
-        catch (Exception ex)
+        else
         {
-            //throw new Exception(ex.Message + Environment.NewLine + cmdSql);
-            throw new Exception(ex.Message + Environment.NewLine);
+            throw new Exception("SQL Command not initialized");
         }
     }
 
@@ -306,5 +348,3 @@ public class DAConexion : IDisposable
 
     #endregion
 }
-
-
